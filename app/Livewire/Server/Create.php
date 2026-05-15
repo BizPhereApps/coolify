@@ -17,6 +17,8 @@ class Create extends Component
 
     public bool $has_digitalocean_tokens = false;
 
+    public bool $has_vultr_tokens = false;
+
     public function mount()
     {
         $this->private_keys = PrivateKey::ownedByCurrentTeamCached();
@@ -33,6 +35,10 @@ class Create extends Component
 
         $this->has_digitalocean_tokens = CloudProviderToken::ownedByCurrentTeam()
             ->where('provider', 'digitalocean')
+            ->exists();
+
+        $this->has_vultr_tokens = CloudProviderToken::ownedByCurrentTeam()
+            ->where('provider', 'vultr')
             ->exists();
     }
 

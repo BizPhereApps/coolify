@@ -45,6 +45,28 @@
                 </x-modal-input>
             </div>
 
+            <div>
+                <x-modal-input title="Connect a Vultr Instance">
+                    <x-slot:content>
+                        <div class="relative gap-2 cursor-pointer coolbox group">
+                            <div class="flex items-center gap-4 mx-6">
+                                <svg class="w-10 h-10 flex-shrink-0" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                                    <rect width="32" height="32" fill="#007BFC" rx="6" />
+                                    <path fill="#fff" d="M6 9h6l4 6 4-6h6l-7 11v3h-6v-3z" />
+                                </svg>
+                                <div class="flex flex-col justify-center flex-1">
+                                    <div class="box-title">Connect a Vultr Instance</div>
+                                    <div class="box-description">
+                                        Deploy instances directly from your Vultr account
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </x-slot:content>
+                    <livewire:server.new.by-vultr />
+                </x-modal-input>
+            </div>
+
             <div class="border-t dark:border-coolgray-300 my-4"></div>
         @endcan
 
