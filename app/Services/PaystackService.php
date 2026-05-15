@@ -76,6 +76,59 @@ class PaystackService
         ], static fn ($v) => $v !== null)));
     }
 
+    /**
+     * List supported NGN banks (used in the payout-account dropdown).
+     */
+    public function getBanks(string $country = 'nigeria'): array
+    {
+        return $this->parse($this->client()->get('/bank', ['country' => $country]));
+    }
+
+    /**
+     * Verify a bank account belongs to a real person/business.
+     * Paystack returns account_name + account_number on success.
+     */
+    public function resolveAccount(string $accountNumber, string $bankCode): array
+    {
+        return $this->parse($this->client()->get('/bank/resolve', [
+            'account_number' => $accountNumber,
+            'bank_code' => $bankCode,
+        ]));
+    }
+
+    /**
+     * Create a Paystack Transfer Recipient — required before we can initiate
+     * a Transfer to a bank account. Returns the recipient_code we store on
+     * PayoutAccount.
+     */
+    public function createTransferRecipient(string $accountName, string $accountNumber, string $bankCode, string $type = 'nuban'): array
+    {
+        return $this->parse($this->client()->post('/transferrecipient', [
+            'type' => $type,
+            'name' => $accountName,
+            'account_number' => $accountNumber,
+            'bank_code' => $bankCode,
+            'currency' => config('paystack.currency', 'NGN'),
+        ]));
+    }
+
+    /**
+     * Initiate a single transfer to a previously-created recipient. The
+     * actual settlement may require an OTP-confirm step on the Paystack
+     * dashboard for certain account balances; in test mode it's automatic.
+     */
+    public function initiateTransfer(string $recipientCode, int $amountNgn, string $reason, ?string $reference = null): array
+    {
+        return $this->parse($this->client()->post('/transfer', array_filter([
+            'source' => 'balance',
+            'recipient' => $recipientCode,
+            'amount' => $amountNgn * 100,
+            'reason' => $reason,
+            'reference' => $reference,
+            'currency' => config('paystack.currency', 'NGN'),
+        ], static fn ($v) => $v !== null)));
+    }
+
     public function verifyWebhookSignature(string $signatureHeader, string $rawBody): bool
     {
         $webhookSecret = config('paystack.webhook_secret') ?: $this->secretKey;
@@ -90,7 +143,7 @@ class PaystackService
             ->withToken($this->secretKey)
             ->acceptJson()
             ->timeout(30)
-            ->retry(2, 250);
+            ->retry(2, 250, throw: false);
     }
 
     private function parse(Response $response): array

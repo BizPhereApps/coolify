@@ -49,6 +49,14 @@ class Kernel extends ConsoleKernel
         // Nolbase: downgrade expired Pro trials to Free at 00:05 UTC daily.
         if (isCloud()) {
             $this->scheduleInstance->job(new EndExpiredTrialsJob)->dailyAt('00:05')->onOneServer();
+
+            // Marketplace payouts: every Monday 09:00 Africa/Lagos sweep all
+            // Developers with verified payout accounts and a pending balance
+            // >= ₦5,000, send them a Paystack Transfer for the total.
+            $this->scheduleInstance->job(new \App\Jobs\RunPayoutBatchJob)
+                ->weeklyOn(\Illuminate\Console\Scheduling\Schedule::MONDAY, '09:00')
+                ->timezone('Africa/Lagos')
+                ->onOneServer();
         }
 
         if (isDev()) {

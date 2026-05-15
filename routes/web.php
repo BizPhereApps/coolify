@@ -176,6 +176,11 @@ Route::middleware(['auth', 'verified', 'scope.client'])->group(function () {
         Route::get('/offers/new', \App\Livewire\Reseller\OfferForm::class)->name('offers.create');
         Route::get('/offers/{offer}/edit', \App\Livewire\Reseller\OfferForm::class)->name('offers.edit');
         Route::get('/invitations/new', \App\Livewire\Reseller\InvitationForm::class)->name('invitations.create');
+
+        Route::prefix('payouts')->name('payouts.')->group(function () {
+            Route::get('/', \App\Livewire\Reseller\Payouts\Index::class)->name('index');
+            Route::get('/edit', \App\Livewire\Reseller\Payouts\AccountForm::class)->name('edit');
+        });
     });
 
     Route::get('/payments/paystack/callback', function (\Illuminate\Http\Request $request) {

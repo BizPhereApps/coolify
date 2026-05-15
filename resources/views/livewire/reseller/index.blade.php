@@ -5,7 +5,10 @@
             <h1>Reseller</h1>
             <div class="subtitle">Sell hosting slices of your servers to your own clients. Nolbase handles billing; you set the price.</div>
         </div>
-        <a href="{{ route('reseller.offers.create') }}" class="button bg-coollabs text-white">New offer</a>
+        <div class="flex gap-2">
+            <a href="{{ route('reseller.payouts.index') }}" class="button">Payouts</a>
+            <a href="{{ route('reseller.offers.create') }}" class="button bg-coollabs text-white">New offer</a>
+        </div>
     </div>
 
     <section class="mt-6">
