@@ -15,9 +15,13 @@ class DecideWhatToDoWithUser
         // Nolbase: suspended teams are denied access entirely. Log them out
         // and send them back to login with a notice. Pre-auth requests pass
         // through unchanged.
+        //
+        // currentTeam() is the method that reads from session — distinct from
+        // the transient $user->currentTeam attribute that's only set after
+        // refreshSession() runs (which happens later in this middleware).
         $user = auth()?->user();
         if ($user) {
-            $team = $user->currentTeam ?? $user->teams?->first();
+            $team = $user->currentTeam() ?? $user->teams()->first();
             if ($team && $team->nolbase_status === 'suspended' && ! $request->routeIs('login')) {
                 auth()->logout();
                 $request->session()->invalidate();

@@ -30,7 +30,12 @@ class Paystack extends Controller
         $reference = data_get($payload, 'data.reference')
             ?? data_get($payload, 'data.subscription_code')
             ?? data_get($payload, 'data.customer.customer_code');
-        $eventId = data_get($payload, 'data.id') ? 'pse_'.data_get($payload, 'data.id').'_'.$eventType : null;
+        // Idempotency key: prefer Paystack's data.id; fall back to a body hash.
+        // Postgres treats NULL != NULL in unique constraints, so a null id
+        // would allow duplicate rows for events without an explicit id.
+        $eventId = data_get($payload, 'data.id')
+            ? 'pse_'.data_get($payload, 'data.id').'_'.$eventType
+            : 'pse_hash_'.hash('sha256', $rawBody);
 
         $event = PaystackEvent::firstOrCreate(
             ['paystack_event_id' => $eventId],
