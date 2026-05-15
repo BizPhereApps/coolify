@@ -105,6 +105,24 @@ Route::get('/auth/{provider}/callback', [OauthController::class, 'callback'])->n
 
 Route::view('/legal/source', 'legal.source')->name('legal.source');
 
+// Nolbase super-admin (separate guard, distinct from tenant auth)
+Route::prefix('nolbase/admin')->name('nolbase.admin.')->group(function () {
+    Route::get('/login', \App\Livewire\Nolbase\Admin\Login::class)->name('login');
+    Route::post('/logout', function () {
+        \Illuminate\Support\Facades\Auth::guard('nolbase')->logout();
+        request()->session()->invalidate();
+        request()->session()->regenerateToken();
+
+        return redirect()->route('nolbase.admin.login');
+    })->name('logout');
+
+    Route::middleware('nolbase.admin')->group(function () {
+        Route::get('/', \App\Livewire\Nolbase\Admin\Dashboard::class)->name('dashboard');
+        Route::get('/tenants', \App\Livewire\Nolbase\Admin\Tenants\Index::class)->name('tenants.index');
+        Route::get('/tenants/{team}', \App\Livewire\Nolbase\Admin\Tenants\Show::class)->name('tenants.show');
+    });
+});
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware(['throttle:force-password-reset'])->group(function () {
         Route::get('/force-password-reset', ForcePasswordReset::class)->name('auth.force-password-reset');

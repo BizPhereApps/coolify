@@ -40,6 +40,14 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        // Nolbase super-admin guard. Distinct session + provider so that a
+        // Nolbase staff member's admin login is completely separate from
+        // any personal tenant account they may have.
+        'nolbase' => [
+            'driver' => 'session',
+            'provider' => 'nolbase_admins',
+        ],
     ],
 
     /*
@@ -65,10 +73,10 @@ return [
             'model' => App\Models\User::class,
         ],
 
-        // 'users' => [
-        //     'driver' => 'database',
-        //     'table' => 'users',
-        // ],
+        'nolbase_admins' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\NolbaseAdmin::class,
+        ],
     ],
 
     /*

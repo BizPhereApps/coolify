@@ -12,6 +12,23 @@ class DecideWhatToDoWithUser
 {
     public function handle(Request $request, Closure $next): Response
     {
+        // Nolbase: suspended teams are denied access entirely. Log them out
+        // and send them back to login with a notice. Pre-auth requests pass
+        // through unchanged.
+        $user = auth()?->user();
+        if ($user) {
+            $team = $user->currentTeam ?? $user->teams?->first();
+            if ($team && $team->nolbase_status === 'suspended' && ! $request->routeIs('login')) {
+                auth()->logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                return redirect()->route('login')->withErrors([
+                    'email' => 'Your account has been suspended. Contact '.config('nolbase.support_email').'.',
+                ]);
+            }
+        }
+
         if (auth()?->user()?->teams?->count() === 0) {
             $currentTeam = auth()->user()?->recreate_personal_team();
             refreshSession($currentTeam);
@@ -46,7 +63,7 @@ class DecideWhatToDoWithUser
                     return $next($request);
                 }
 
-                return redirect()->route('subscription.index');
+                return redirect()->route('subscription.pricing');
             }
         }
         if (showBoarding() && ! in_array($request->path(), allowedPathsForBoardingAccounts())) {
@@ -59,7 +76,7 @@ class DecideWhatToDoWithUser
         if (auth()->user()->hasVerifiedEmail() && $request->path() === 'verify') {
             return redirect(RouteServiceProvider::HOME);
         }
-        if (isSubscriptionActive() && $request->routeIs('subscription.index')) {
+        if (isSubscriptionActive() && $request->routeIs('subscription.pricing')) {
             return redirect(RouteServiceProvider::HOME);
         }
 

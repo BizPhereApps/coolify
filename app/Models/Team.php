@@ -46,6 +46,7 @@ class Team extends Model implements SendsDiscord, SendsEmail, SendsPushover, Sen
         'personal_team',
         'show_boarding',
         'custom_server_limit',
+        'nolbase_status',
     ];
 
     protected $casts = [
