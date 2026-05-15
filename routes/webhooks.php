@@ -4,6 +4,7 @@ use App\Http\Controllers\Webhook\Bitbucket;
 use App\Http\Controllers\Webhook\Gitea;
 use App\Http\Controllers\Webhook\Github;
 use App\Http\Controllers\Webhook\Gitlab;
+use App\Http\Controllers\Webhook\Paystack;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/source/github/redirect', [Github::class, 'redirect']);
@@ -16,3 +17,5 @@ Route::post('/source/gitlab/events/manual', [Gitlab::class, 'manual']);
 Route::post('/source/bitbucket/events/manual', [Bitbucket::class, 'manual']);
 
 Route::post('/source/gitea/events/manual', [Gitea::class, 'manual']);
+
+Route::post('/payments/paystack/events', [Paystack::class, 'events'])->name('paystack.webhook');

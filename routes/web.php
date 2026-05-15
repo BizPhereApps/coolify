@@ -78,6 +78,8 @@ use App\Livewire\SharedVariables\Team\Index as TeamSharedVariablesIndex;
 use App\Livewire\Source\Github\Change as GitHubChange;
 use App\Livewire\Storage\Index as StorageIndex;
 use App\Livewire\Storage\Show as StorageShow;
+use App\Livewire\Subscription\PricingPlans as SubscriptionPricingPlans;
+use App\Livewire\Subscription\Show as SubscriptionShow;
 use App\Livewire\Tags\Show as TagsShow;
 use App\Livewire\Team\AdminView as TeamAdminView;
 use App\Livewire\Team\Index as TeamIndex;
@@ -110,7 +112,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/admin', AdminIndex::class)->name('admin.index');
     Route::get('/onboarding', BoardingIndex::class)->name('onboarding');
 
-    // Subscription routes will be rebuilt in Step 3 (Paystack layer).
+    Route::get('/subscription', SubscriptionShow::class)->name('subscription.show');
+    Route::get('/subscription/new', SubscriptionPricingPlans::class)->name('subscription.pricing');
+    Route::get('/payments/paystack/callback', function (\Illuminate\Http\Request $request) {
+        $reference = (string) $request->query('reference', '');
+        if (! $reference) {
+            return redirect()->route('subscription.show')->withErrors(['paystack' => 'Missing reference.']);
+        }
+        try {
+            \App\Actions\Paystack\VerifyTransaction::run($reference);
+
+            return redirect()->route('subscription.show')->with('success', 'Subscription activated.');
+        } catch (\Throwable $e) {
+            return redirect()->route('subscription.show')->withErrors(['paystack' => $e->getMessage()]);
+        }
+    })->name('payments.paystack.callback');
 
     Route::get('/settings', SettingsIndex::class)->name('settings.index');
     Route::get('/settings/advanced', SettingsAdvanced::class)->name('settings.advanced');
