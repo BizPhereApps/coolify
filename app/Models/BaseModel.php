@@ -17,6 +17,19 @@ abstract class BaseModel extends Model
             if (! $model->uuid) {
                 $model->uuid = (string) new Cuid2;
             }
+
+            // Nolbase plan-quota enforcement for standalone databases.
+            // StandaloneDocker is a destination model, not a database — exclude it.
+            $basename = class_basename($model);
+            if (str_starts_with($basename, 'Standalone') && $basename !== 'StandaloneDocker') {
+                $team = currentTeam();
+                if ($team && \App\Support\PlanQuota::canAddDatabase($team) === false) {
+                    $limit = \App\Support\PlanQuota::databaseLimit($team);
+                    throw new \RuntimeException(
+                        "Your current plan allows a maximum of {$limit} database(s). Upgrade your plan to add more."
+                    );
+                }
+            }
         });
     }
 

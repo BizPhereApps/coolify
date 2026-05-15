@@ -43,5 +43,37 @@
                 <livewire:subscription.actions :subscription="$subscription" />
             </div>
         </div>
+
+        @if (! empty($usage))
+            <section class="mt-8">
+                <h2 class="mb-3">Plan usage</h2>
+                <div class="grid gap-3 sm:grid-cols-2">
+                    @foreach (['servers' => 'Servers', 'apps' => 'Applications', 'databases' => 'Databases', 'team_members' => 'Team members'] as $key => $label)
+                        @php $u = $usage[$key]; @endphp
+                        <div class="rounded-md border border-coolgray-200 bg-coolgray-100 p-4">
+                            <div class="flex items-baseline justify-between">
+                                <span class="text-sm text-neutral-400">{{ $label }}</span>
+                                <span class="text-sm font-semibold">
+                                    {{ $u['used'] }} /
+                                    @if ($u['unlimited']) <span class="text-success">Unlimited</span> @else {{ $u['limit'] }} @endif
+                                </span>
+                            </div>
+                            @if (! $u['unlimited'])
+                                <div class="mt-2 h-1.5 w-full overflow-hidden rounded bg-coolgray-200">
+                                    <div class="h-full rounded {{ $u['percent'] >= 100 ? 'bg-error' : ($u['percent'] >= 80 ? 'bg-warning' : 'bg-coollabs') }}"
+                                         style="width: {{ max(2, $u['percent']) }}%"></div>
+                                </div>
+                                @if ($u['percent'] >= 100)
+                                    <p class="mt-2 text-xs text-error">
+                                        Limit reached.
+                                        <a href="{{ route('subscription.pricing') }}" class="underline hover:text-coollabs">Upgrade for more</a>.
+                                    </p>
+                                @endif
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            </section>
+        @endif
     @endif
 </div>

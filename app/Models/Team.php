@@ -107,10 +107,28 @@ class Team extends Model implements SendsDiscord, SendsEmail, SendsPushover, Sen
         if (! $team) {
             return true;
         }
-        $serverLimit = Team::serverLimit($team);
-        $servers = $team->servers->count();
 
-        return $servers >= $serverLimit;
+        return ! \App\Support\PlanQuota::canAddServer($team);
+    }
+
+    public static function appLimitReached(?Team $team = null): bool
+    {
+        $team = $team ?? currentTeam();
+        if (! $team) {
+            return true;
+        }
+
+        return ! \App\Support\PlanQuota::canAddApp($team);
+    }
+
+    public static function databaseLimitReached(?Team $team = null): bool
+    {
+        $team = $team ?? currentTeam();
+        if (! $team) {
+            return true;
+        }
+
+        return ! \App\Support\PlanQuota::canAddDatabase($team);
     }
 
     public function subscriptionPastOverDue()
@@ -137,26 +155,23 @@ class Team extends Model implements SendsDiscord, SendsEmail, SendsPushover, Sen
         if (! $team) {
             return 0;
         }
-        if ($team->id === 0 && isDev()) {
-            return 9999999;
-        }
         $team = Team::find($team->id);
         if (! $team) {
             return 0;
         }
 
-        return data_get($team, 'limits', 0);
+        $limit = \App\Support\PlanQuota::serverLimit($team);
+
+        // PlanQuota::UNLIMITED (0) is translated to a large number for legacy
+        // callers that compare directly (e.g. servers.count() >= limit).
+        return $limit === \App\Support\PlanQuota::UNLIMITED ? PHP_INT_MAX : $limit;
     }
 
     public function limits(): Attribute
     {
         return Attribute::make(
             get: function () {
-                if (config('constants.coolify.self_hosted') || $this->id === 0) {
-                    return 999999999999;
-                }
-
-                return $this->custom_server_limit ?? 2;
+                return Team::serverLimit($this);
             }
         );
     }

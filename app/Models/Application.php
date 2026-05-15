@@ -231,6 +231,15 @@ class Application extends BaseModel
     protected static function booted()
     {
         static::creating(function ($application) {
+            // Nolbase plan-quota enforcement: refuse to create apps beyond the team's plan limit.
+            $team = currentTeam();
+            if ($team && \App\Support\PlanQuota::canAddApp($team) === false) {
+                $limit = \App\Support\PlanQuota::appLimit($team);
+                throw new \RuntimeException(
+                    "Your current plan allows a maximum of {$limit} application(s). Upgrade your plan to add more."
+                );
+            }
+
             $application->manual_webhook_secret_github ??= Str::random(40);
             $application->manual_webhook_secret_gitlab ??= Str::random(40);
             $application->manual_webhook_secret_bitbucket ??= Str::random(40);
