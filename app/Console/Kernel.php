@@ -8,6 +8,7 @@ use App\Jobs\CheckHelperImageJob;
 use App\Jobs\CheckTraefikVersionJob;
 use App\Jobs\CleanupInstanceStuffsJob;
 use App\Jobs\CleanupOrphanedPreviewContainersJob;
+use App\Jobs\EndExpiredTrialsJob;
 use App\Jobs\PullChangelog;
 use App\Jobs\PullTemplatesFromCDN;
 use App\Jobs\RegenerateSslCertJob;
@@ -44,6 +45,11 @@ class Kernel extends ConsoleKernel
         $this->scheduleInstance->command('cleanup:redis --clear-locks')->daily();
         $this->scheduleInstance->command('sanctum:prune-expired --hours=1')->hourly()->onOneServer();
         $this->scheduleInstance->job(new ApiTokenExpirationWarningJob)->hourly()->onOneServer();
+
+        // Nolbase: downgrade expired Pro trials to Free at 00:05 UTC daily.
+        if (isCloud()) {
+            $this->scheduleInstance->job(new EndExpiredTrialsJob)->dailyAt('00:05')->onOneServer();
+        }
 
         if (isDev()) {
             // Instance Jobs

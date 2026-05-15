@@ -2,6 +2,8 @@
 
 namespace App\Actions\Fortify;
 
+use App\Models\Plan;
+use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -59,6 +61,7 @@ class CreateNewUser implements CreatesNewUsers
             $team = $user->teams()->first();
             if (isCloud()) {
                 $user->sendVerificationEmail();
+                $this->startProTrial($team);
             } else {
                 $user->markEmailAsVerified();
             }
@@ -67,5 +70,20 @@ class CreateNewUser implements CreatesNewUsers
         session(['currentTeam' => $user->currentTeam = $team]);
 
         return $user;
+    }
+
+    private function startProTrial(\App\Models\Team $team): void
+    {
+        $pro = Plan::where('code', 'pro')->first();
+        if (! $pro) {
+            return;
+        }
+
+        Subscription::firstOrCreate(['team_id' => $team->id], [
+            'plan_id' => $pro->id,
+            'status' => Subscription::STATUS_TRIALING,
+            'period' => Subscription::PERIOD_MONTHLY,
+            'trial_ends_at' => now()->addDays(14),
+        ]);
     }
 }

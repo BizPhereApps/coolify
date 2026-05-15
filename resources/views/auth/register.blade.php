@@ -16,11 +16,16 @@ $email = getOldOrLocal('email', 'test3@example.com');
             <div class="w-full max-w-md space-y-8">
                 <div class="text-center space-y-2">
                     <h1 class="!text-5xl font-extrabold tracking-tight text-gray-900 dark:text-white">
-                        Coolify
+                        Nolbase
                     </h1>
                     <p class="text-lg dark:text-neutral-400">
                         Create your account
                     </p>
+                    @if (! $isFirstUser)
+                        <p class="text-sm dark:text-neutral-500">
+                            Includes a <span class="font-semibold text-coollabs dark:text-white">14-day Pro trial</span> — no card required.
+                        </p>
+                    @endif
                 </div>
 
                 <div class="space-y-6">
