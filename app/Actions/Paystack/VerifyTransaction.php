@@ -37,6 +37,12 @@ class VerifyTransaction
         $customerCode = data_get($data, 'customer.customer_code');
         $subscriptionCode = data_get($data, 'plan_object.subscription_code')
             ?? data_get($data, 'authorization.subscription_code');
+        // I7: capture the email_token whenever Paystack returns it so an
+        // immediate subscription disable later doesn't fail. Paystack sometimes
+        // returns this on verify (when the plan has a subscription_code) and
+        // always returns it on the subscription.create webhook.
+        $emailToken = data_get($data, 'plan_object.subscription_email_token')
+            ?? data_get($data, 'authorization.subscription_email_token');
 
         $subscription = $team->subscription ?? new Subscription(['team_id' => $team->id]);
 
@@ -45,6 +51,7 @@ class VerifyTransaction
             'plan_id' => $plan->id,
             'paystack_customer_code' => $customerCode ?? $subscription->paystack_customer_code,
             'paystack_subscription_code' => $subscriptionCode ?? $subscription->paystack_subscription_code,
+            'paystack_email_token' => $emailToken ?? $subscription->paystack_email_token,
             'status' => Subscription::STATUS_ACTIVE,
             'period' => $period,
             'current_period_start' => now(),

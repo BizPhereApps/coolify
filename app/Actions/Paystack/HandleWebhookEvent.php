@@ -90,6 +90,28 @@ class HandleWebhookEvent
             'status' => Subscription::STATUS_PAST_DUE,
             'last_payment_failed_at' => now(),
         ]);
+
+        $ownerEmail = $subscription->team?->members()
+            ->wherePivot('role', 'owner')
+            ->value('email');
+        if (! $ownerEmail) {
+            return;
+        }
+
+        try {
+            \Illuminate\Support\Facades\Mail::send(
+                'emails.subscription-invoice-failed',
+                ['subscriptionUrl' => url('/subscription')],
+                fn (\Symfony\Component\Mime\Email $m) => $m
+                    ->to($ownerEmail)
+                    ->subject('Your Nolbase subscription renewal failed'),
+            );
+        } catch (\Throwable $e) {
+            Log::warning('subscription-invoice-failed email failed', [
+                'team_id' => $subscription->team_id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     private function onChargeSuccess(PaystackEvent $event): void

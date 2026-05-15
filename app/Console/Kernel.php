@@ -50,6 +50,11 @@ class Kernel extends ConsoleKernel
         if (isCloud()) {
             $this->scheduleInstance->job(new EndExpiredTrialsJob)->dailyAt('00:05')->onOneServer();
 
+            // Trial-ends-soon reminders: daily at 09:00 UTC. The job's own
+            // 2-3 day window ensures each subscription is notified once.
+            $this->scheduleInstance->job(new \App\Jobs\SendTrialEndingSoonRemindersJob)
+                ->dailyAt('09:00')->onOneServer();
+
             // Marketplace payouts: every Monday 09:00 Africa/Lagos sweep all
             // Developers with verified payout accounts and a pending balance
             // >= ₦5,000, send them a Paystack Transfer for the total.

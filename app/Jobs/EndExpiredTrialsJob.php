@@ -10,6 +10,8 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Symfony\Component\Mime\Email;
 
 class EndExpiredTrialsJob implements ShouldQueue
 {
@@ -39,6 +41,7 @@ class EndExpiredTrialsJob implements ShouldQueue
                 'current_period_start' => now(),
                 'current_period_end' => null,
             ]);
+            $this->notify($subscription);
         }
 
         // Trials that converted to a Paystack subscription mid-trial are
@@ -46,6 +49,26 @@ class EndExpiredTrialsJob implements ShouldQueue
 
         if ($expired->isNotEmpty()) {
             Log::info("EndExpiredTrialsJob: downgraded {$expired->count()} expired trials to Free.");
+        }
+    }
+
+    private function notify(Subscription $subscription): void
+    {
+        $ownerEmail = $subscription->team?->members()
+            ->wherePivot('role', 'owner')
+            ->value('email');
+        if (! $ownerEmail) {
+            return;
+        }
+
+        try {
+            Mail::send(
+                'emails.trial-ended',
+                ['subscriptionUrl' => url('/subscription')],
+                fn (Email $m) => $m->to($ownerEmail)->subject('Your Nolbase trial ended'),
+            );
+        } catch (\Throwable $e) {
+            Log::warning('trial-ended email failed', ['team_id' => $subscription->team_id, 'error' => $e->getMessage()]);
         }
     }
 }

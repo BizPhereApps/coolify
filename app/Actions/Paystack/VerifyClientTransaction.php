@@ -48,6 +48,8 @@ class VerifyClientTransaction
         $customerCode = data_get($data, 'customer.customer_code');
         $subscriptionCode = data_get($data, 'plan_object.subscription_code')
             ?? data_get($data, 'authorization.subscription_code');
+        $emailToken = data_get($data, 'plan_object.subscription_email_token')
+            ?? data_get($data, 'authorization.subscription_email_token');
         $amountKobo = (int) data_get($data, 'amount', 0);
 
         $invitation = ClientInvitation::findOrFail($invitationId);
@@ -58,7 +60,7 @@ class VerifyClientTransaction
         }
 
         return DB::transaction(function () use (
-            $invitation, $offer, $period, $email, $customerCode, $subscriptionCode, $amountKobo, $reference, $data
+            $invitation, $offer, $period, $email, $customerCode, $subscriptionCode, $emailToken, $amountKobo, $reference, $data
         ) {
             $user = $this->resolveOrCreateClient($email, $invitation->project_name);
 
@@ -87,6 +89,7 @@ class VerifyClientTransaction
                 'hosting_offer_id' => $offer->id,
                 'paystack_subscription_code' => $subscriptionCode,
                 'paystack_customer_code' => $customerCode,
+                'paystack_email_token' => $emailToken,
                 'status' => ClientSubscription::STATUS_ACTIVE,
                 'period' => $period,
                 'current_period_start' => $now,

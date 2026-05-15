@@ -122,6 +122,23 @@ class Server extends BaseModel
 
     protected static function booted()
     {
+        // Nolbase: refuse to delete a server that has active Clients hosted on
+        // any of its HostingOffers. Force the Developer to terminate the
+        // SubTeams first (which is also where refunds happen). This protects
+        // Clients from losing their hosting without notice.
+        static::deleting(function ($server) {
+            $activeClients = \App\Models\SubTeam::query()
+                ->whereNull('terminated_at')
+                ->whereIn('hosting_offer_id', \App\Models\HostingOffer::where('server_id', $server->id)->pluck('id'))
+                ->count();
+            if ($activeClients > 0) {
+                throw new \RuntimeException(
+                    "Cannot delete this server: {$activeClients} active Client(s) are hosted on its offers. ".
+                    'Terminate or migrate them first via /reseller.'
+                );
+            }
+        });
+
         static::saving(function ($server) {
             $payload = [];
             if ($server->user) {

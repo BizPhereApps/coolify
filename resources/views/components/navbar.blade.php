@@ -307,6 +307,18 @@
                             </a>
                         </li>
                     @endif
+                    @if (isCloud() && auth()->user()->currentTeam()?->canResell())
+                        <li>
+                            <a title="Reseller" {{ wireNavigate() }}
+                                class="{{ request()->is('reseller*') ? 'menu-item-active menu-item' : 'menu-item' }}"
+                                href="{{ route('reseller.index') }}">
+                                <svg class="menu-item-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 9l4-5h10l4 5M3 9v11a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V9M3 9h18M9 13h6" />
+                                </svg>
+                                <span class="menu-item-label">Reseller</span>
+                            </a>
+                        </li>
+                    @endif
                     @if (isInstanceAdmin())
                         <li>
 
