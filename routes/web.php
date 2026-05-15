@@ -105,6 +105,29 @@ Route::get('/auth/{provider}/callback', [OauthController::class, 'callback'])->n
 
 Route::view('/legal/source', 'legal.source')->name('legal.source');
 
+// Marketplace (Phase 6) — public invitation accept page + Paystack callback
+// for client payments. Both must remain unauthenticated until the Client
+// completes the Paystack flow; VerifyClientTransaction creates the User
+// + SubTeam + Project + ClientSubscription on success and auto-logs them in.
+Route::get('/invitations/{token}', \App\Livewire\Marketplace\AcceptInvitation::class)->name('marketplace.invitation.accept');
+Route::get('/payments/paystack/marketplace-callback', function (\Illuminate\Http\Request $request) {
+    $reference = (string) $request->query('reference', '');
+    if (! $reference) {
+        return redirect('/')->withErrors(['paystack' => 'Missing reference.']);
+    }
+    try {
+        $sub = \App\Actions\Paystack\VerifyClientTransaction::run($reference);
+        $clientUser = $sub->subTeam->clientUser;
+        if ($clientUser) {
+            auth()->login($clientUser);
+        }
+
+        return redirect('/client')->with('success', 'Welcome! Your hosting is set up.');
+    } catch (\Throwable $e) {
+        return redirect('/')->withErrors(['paystack' => $e->getMessage()]);
+    }
+})->name('marketplace.callback');
+
 // Nolbase super-admin (separate guard, distinct from tenant auth)
 Route::prefix('nolbase/admin')->name('nolbase.admin.')->group(function () {
     Route::get('/login', \App\Livewire\Nolbase\Admin\Login::class)->name('login');
@@ -127,7 +150,15 @@ Route::prefix('nolbase/admin')->name('nolbase.admin.')->group(function () {
     });
 });
 
-Route::middleware(['auth', 'verified'])->group(function () {
+// Client dashboard (Phase 6.2.1) — auth required, but Clients are NOT subject
+// to the regular tenant `verified` middleware or DecideWhatToDoWithUser
+// subscription redirect (they don't subscribe to Nolbase themselves; they
+// pay their Developer through the marketplace).
+Route::middleware(['auth'])->prefix('client')->name('client.')->group(function () {
+    Route::get('/', \App\Livewire\Client\Dashboard::class)->name('dashboard');
+});
+
+Route::middleware(['auth', 'verified', 'scope.client'])->group(function () {
     Route::middleware(['throttle:force-password-reset'])->group(function () {
         Route::get('/force-password-reset', ForcePasswordReset::class)->name('auth.force-password-reset');
     });
