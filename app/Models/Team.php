@@ -132,6 +132,15 @@ class Team extends Model implements SendsDiscord, SendsEmail, SendsPushover, Sen
         return ! \App\Support\PlanQuota::canAddDatabase($team);
     }
 
+    public function canResell(): bool
+    {
+        if (! isCloud()) {
+            return true; // self-hosted: no gating
+        }
+
+        return (bool) $this->subscription?->plan?->hasFeature('reseller');
+    }
+
     public function subscriptionPastOverDue()
     {
         if (isCloud()) {

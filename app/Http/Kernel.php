@@ -75,5 +75,6 @@ class Kernel extends HttpKernel
         'can.update.resource' => \App\Http\Middleware\CanUpdateResource::class,
         'can.access.terminal' => \App\Http\Middleware\CanAccessTerminal::class,
         'nolbase.admin' => \App\Http\Middleware\RequireNolbaseAdmin::class,
+        'reseller' => \App\Http\Middleware\RequireResellerFeature::class,
     ];
 }

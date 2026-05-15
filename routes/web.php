@@ -138,6 +138,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/subscription', SubscriptionShow::class)->name('subscription.show');
     Route::get('/subscription/new', SubscriptionPricingPlans::class)->name('subscription.pricing');
+
+    // Reseller / marketplace (Phase 6) — gated to plans with the 'reseller' feature
+    Route::middleware('reseller')->prefix('reseller')->name('reseller.')->group(function () {
+        Route::get('/', \App\Livewire\Reseller\Index::class)->name('index');
+        Route::get('/offers/new', \App\Livewire\Reseller\OfferForm::class)->name('offers.create');
+        Route::get('/offers/{offer}/edit', \App\Livewire\Reseller\OfferForm::class)->name('offers.edit');
+        Route::get('/invitations/new', \App\Livewire\Reseller\InvitationForm::class)->name('invitations.create');
+    });
+
     Route::get('/payments/paystack/callback', function (\Illuminate\Http\Request $request) {
         $reference = (string) $request->query('reference', '');
         if (! $reference) {
