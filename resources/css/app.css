@@ -19,30 +19,46 @@
     --font-geist-sans: 'Geist Sans', Inter, sans-serif;
     --font-logs: 'Geist Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
 
-    --color-base: #101010;
-    --color-warning: #fcd452;
-    --color-warning-50: #fefce8;
-    --color-warning-100: #fef9c3;
-    --color-warning-200: #fef08a;
-    --color-warning-300: #fde047;
-    --color-warning-400: #fcd452;
-    --color-warning-500: #facc15;
-    --color-warning-600: #ca8a04;
-    --color-warning-700: #a16207;
-    --color-warning-800: #854d0e;
-    --color-warning-900: #713f12;
-    --color-success: #22C55E;
-    --color-error: #dc2626;
-    --color-coollabs-50: #f5f0ff;
-    --color-coollabs: #6b16ed;
-    --color-coollabs-100: #7317ff;
-    --color-coollabs-200: #5a12c7;
-    --color-coollabs-300: #4a0fa3;
-    --color-coolgray-100: #181818;
-    --color-coolgray-200: #202020;
-    --color-coolgray-300: #242424;
-    --color-coolgray-400: #282828;
-    --color-coolgray-500: #323232;
+    /* Brand palette */
+    --color-brand-navy: #0B1020;
+    --color-brand-blue: #2F6BFF;
+    --color-brand-teal: #33D1CC;
+    --color-brand-graphite: #161C2D;
+    --color-brand-cloud: #F4F7FB;
+    --color-brand-carbon: #111827;
+    --color-brand-slate: #6B7280;
+
+    /* Main dark background = Deep Midnight Navy */
+    --color-base: #0B1020;
+
+    /* Semantic */
+    --color-success: #16C784;
+    --color-error: #EF4444;
+    --color-warning: #F5B700;
+    --color-warning-50: #FFFBEB;
+    --color-warning-100: #FEF3C7;
+    --color-warning-200: #FDE68A;
+    --color-warning-300: #FCD34D;
+    --color-warning-400: #F5B700;
+    --color-warning-500: #D97706;
+    --color-warning-600: #B45309;
+    --color-warning-700: #92400E;
+    --color-warning-800: #78350F;
+    --color-warning-900: #451A03;
+
+    /* Primary accent — Electric Blue (replaces legacy purple "coollabs") */
+    --color-coollabs-50: #EAF1FF;
+    --color-coollabs: #2F6BFF;
+    --color-coollabs-100: #5A8AFF;
+    --color-coollabs-200: #2554CC;
+    --color-coollabs-300: #1B40A3;
+
+    /* Surface scale — navy-tinted graphite (100 = primary surface, 500 = lightest) */
+    --color-coolgray-100: #161C2D;
+    --color-coolgray-200: #1D2538;
+    --color-coolgray-300: #242E44;
+    --color-coolgray-400: #2D3852;
+    --color-coolgray-500: #374466;
 }
 
 /*
