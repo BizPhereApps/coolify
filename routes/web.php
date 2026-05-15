@@ -120,6 +120,10 @@ Route::prefix('nolbase/admin')->name('nolbase.admin.')->group(function () {
         Route::get('/', \App\Livewire\Nolbase\Admin\Dashboard::class)->name('dashboard');
         Route::get('/tenants', \App\Livewire\Nolbase\Admin\Tenants\Index::class)->name('tenants.index');
         Route::get('/tenants/{team}', \App\Livewire\Nolbase\Admin\Tenants\Show::class)->name('tenants.show');
+        Route::get('/audit', \App\Livewire\Nolbase\Admin\AuditLog::class)->name('audit');
+        Route::middleware('nolbase.admin:staff')->group(function () {
+            Route::get('/settings', \App\Livewire\Nolbase\Admin\Settings::class)->name('settings');
+        });
     });
 });
 
