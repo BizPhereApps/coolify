@@ -156,6 +156,7 @@ Route::prefix('nolbase/admin')->name('nolbase.admin.')->group(function () {
 // pay their Developer through the marketplace).
 Route::middleware(['auth'])->prefix('client')->name('client.')->group(function () {
     Route::get('/', \App\Livewire\Client\Dashboard::class)->name('dashboard');
+    Route::get('/applications/new', \App\Livewire\Client\Application\Create::class)->name('application.create');
     Route::get('/applications/{applicationUuid}', \App\Livewire\Client\Application\Show::class)->name('application.show');
 });
 

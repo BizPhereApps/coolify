@@ -38,6 +38,16 @@ class Dashboard extends Component
             ->get(['id', 'uuid', 'name', 'fqdn', 'status', 'git_repository', 'environment_id']);
     }
 
+    public function getCanAddAppProperty(): bool
+    {
+        $limit = (int) ($this->subTeam->offer?->max_apps ?? 0);
+        if ($limit === 0) {
+            return true; // 0 means unlimited per the offer convention
+        }
+
+        return $this->applications->count() < $limit;
+    }
+
     public function render()
     {
         return view('livewire.client.dashboard');

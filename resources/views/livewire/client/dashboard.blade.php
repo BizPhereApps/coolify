@@ -38,7 +38,14 @@
             </div>
 
             <section class="mt-8">
-                <h2 class="mb-3">Applications</h2>
+                <div class="mb-3 flex items-baseline justify-between">
+                    <h2>Applications</h2>
+                    @if ($this->canAddApp)
+                        <a href="{{ route('client.application.create') }}" class="button bg-coollabs text-white">New application</a>
+                    @else
+                        <span class="text-xs text-neutral-500">App limit reached ({{ $subTeam->offer->max_apps }})</span>
+                    @endif
+                </div>
                 @if ($this->applications->isEmpty())
                     <div class="rounded-md border border-dashed border-coolgray-200 p-6 text-center text-sm text-neutral-500">
                         <p>No applications yet — your developer ({{ $subTeam->parentTeam->name }}) will set up your code shortly.</p>
