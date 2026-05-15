@@ -1,5 +1,7 @@
 <x-emails.layout>
-Your last invoice has failed to be paid for Coolify Cloud.
+Your last Nolbase subscription renewal failed.
 
-Please update payment details [here]({{ $stripeCustomerPortal }}).
+Paystack couldn't charge your card. Please update your payment method at [your subscription page]({{ $subscriptionUrl ?? url('/subscription') }}) — we'll retry in a few days.
+
+If the renewal continues to fail, your account will move to the Free plan automatically after a grace period. Existing servers and apps stay running; Pro-only features pause.
 </x-emails.layout>

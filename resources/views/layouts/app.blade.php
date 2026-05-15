@@ -68,6 +68,7 @@
                 <div class="p-4 sm:px-6 lg:px-8 lg:py-6">
                     {{ $slot }}
                 </div>
+                <x-agpl-footer />
             </main>
         </div>
     @endauth

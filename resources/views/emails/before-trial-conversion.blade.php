@@ -1,7 +1,7 @@
 <x-emails.layout>
-We would like to inform you that a {{ config('constants.limits.trial_period') }} days of trial has been added to all subscription plans.
+A 14-day Pro trial has been added to your Nolbase account.
 
-You can try out Coolify, without payment information for free. If you like it, you can upgrade to a paid plan at any time.
+You can try Pro features — extra servers, preview environments, reseller offers, email support — without a payment method. If you like it, add a card before the trial ends to stay on Pro.
 
-[Click here](https://app.coolify.io/subscription/new) to start your trial.
+[Start exploring Pro]({{ url('/subscription') }})
 </x-emails.layout>

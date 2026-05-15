@@ -47,6 +47,20 @@ return [
         'resend' => [
             'transport' => 'resend',
         ],
+
+        // Nolbase default for production transactional email (ZeptoMail SMTP).
+        // Configure ZEPTO_HOST / ZEPTO_PORT / ZEPTO_USERNAME / ZEPTO_PASSWORD in .env,
+        // then set MAIL_MAILER=zepto to make it the default mailer.
+        'zepto' => [
+            'transport' => 'smtp',
+            'host' => env('ZEPTO_HOST', 'smtp.zeptomail.com'),
+            'port' => env('ZEPTO_PORT', 587),
+            'encryption' => env('ZEPTO_ENCRYPTION', 'tls'),
+            'username' => env('ZEPTO_USERNAME'),
+            'password' => env('ZEPTO_PASSWORD'),
+            'timeout' => null,
+            'local_domain' => env('MAIL_EHLO_DOMAIN'),
+        ],
         'ses' => [
             'transport' => 'ses',
         ],
