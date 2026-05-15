@@ -37,10 +37,45 @@
                 </div>
             </div>
 
-            <div class="mt-6 rounded-md border border-dashed border-coolgray-200 p-6 text-center text-sm text-neutral-500">
-                <p>Your hosting is set up. Your developer is preparing your application.</p>
-                <p class="mt-2 text-xs">Deploy controls + logs land in Phase 6.2.2.</p>
-            </div>
+            <section class="mt-8">
+                <h2 class="mb-3">Applications</h2>
+                @if ($this->applications->isEmpty())
+                    <div class="rounded-md border border-dashed border-coolgray-200 p-6 text-center text-sm text-neutral-500">
+                        <p>No applications yet — your developer ({{ $subTeam->parentTeam->name }}) will set up your code shortly.</p>
+                    </div>
+                @else
+                    <div class="grid gap-3">
+                        @foreach ($this->applications as $app)
+                            <a href="{{ route('client.application.show', $app->uuid) }}"
+                               class="rounded-md border border-coolgray-200 bg-coolgray-100 p-4 hover:bg-coolgray-200 transition">
+                                <div class="flex items-baseline justify-between">
+                                    <div>
+                                        <div class="font-semibold">{{ $app->name }}</div>
+                                        @if ($app->fqdn)
+                                            <div class="text-xs text-coollabs">{{ $app->fqdn }}</div>
+                                        @endif
+                                    </div>
+                                    <div class="text-xs">
+                                        @php
+                                            $status = strtolower($app->status ?? 'unknown');
+                                            $color = match (true) {
+                                                str_contains($status, 'running') => 'text-success',
+                                                str_contains($status, 'exited'), str_contains($status, 'failed') => 'text-error',
+                                                str_contains($status, 'restarting'), str_contains($status, 'starting') => 'text-warning',
+                                                default => 'text-neutral-500',
+                                            };
+                                        @endphp
+                                        <span class="rounded-full bg-coolgray-200 px-2 py-0.5 {{ $color }}">{{ $app->status ?? 'unknown' }}</span>
+                                    </div>
+                                </div>
+                                @if ($app->git_repository)
+                                    <div class="mt-2 text-xs text-neutral-500 font-mono truncate">{{ $app->git_repository }}</div>
+                                @endif
+                            </a>
+                        @endforeach
+                    </div>
+                @endif
+            </section>
 
             <p class="mt-6 text-center text-xs text-neutral-500">
                 Need help? Contact {{ $subTeam->parentTeam->name }} or <a href="mailto:{{ config('nolbase.support_email') }}" class="underline">{{ config('nolbase.support_email') }}</a>.

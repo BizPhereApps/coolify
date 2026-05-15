@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Client;
 
+use App\Models\Application;
 use App\Models\SubTeam;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -24,6 +25,17 @@ class Dashboard extends Component
         abort_unless($subTeam, 404, 'No active hosting found for this account.');
 
         $this->subTeam = $subTeam;
+    }
+
+    public function getApplicationsProperty()
+    {
+        if (! $this->subTeam->project_id) {
+            return collect();
+        }
+
+        return Application::whereRelation('environment', 'project_id', $this->subTeam->project_id)
+            ->orderBy('name')
+            ->get(['id', 'uuid', 'name', 'fqdn', 'status', 'git_repository', 'environment_id']);
     }
 
     public function render()
