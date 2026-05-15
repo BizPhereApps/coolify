@@ -32,6 +32,51 @@
             </div>
 
             <section class="mt-8">
+                <h2 class="mb-3">Custom domain</h2>
+                @if (! $this->customDomainAllowed)
+                    <div class="rounded-md border border-coolgray-200 bg-coolgray-100 p-4 text-sm text-neutral-500">
+                        Custom domains aren't included in your hosting plan. Contact {{ $subTeam->parentTeam->name }} if you'd like to add one.
+                    </div>
+                @else
+                    <div class="rounded-md border border-coolgray-200 bg-coolgray-100 p-4">
+                        <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end">
+                            <div class="flex-1">
+                                <label class="mb-1 block text-xs uppercase text-neutral-500">Domain</label>
+                                <input type="text" wire:model="customDomain" placeholder="bolasshop.com"
+                                       class="w-full rounded border border-coolgray-200 bg-coolgray-200 px-3 py-2 text-sm font-mono" />
+                            </div>
+                            <button wire:click="saveCustomDomain" class="button bg-coollabs text-white">Save domain</button>
+                        </div>
+                        @error('customDomain') <p class="text-xs text-error">{{ $message }}</p> @enderror
+
+                        @if ($this->serverIp)
+                            <div class="mt-3 rounded border border-warning/30 bg-warning/10 p-3 text-sm">
+                                <p class="mb-1 font-semibold text-warning">DNS setup</p>
+                                <p class="text-xs">Before this domain works, point its DNS at your hosting server:</p>
+                                <table class="mt-2 w-full text-xs">
+                                    <tr class="border-b border-warning/20">
+                                        <td class="py-1 pr-2 text-neutral-500">Record</td>
+                                        <td class="py-1 font-mono">A</td>
+                                    </tr>
+                                    <tr class="border-b border-warning/20">
+                                        <td class="py-1 pr-2 text-neutral-500">Host</td>
+                                        <td class="py-1 font-mono">{{ $customDomain ?: '@' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-1 pr-2 text-neutral-500">Value</td>
+                                        <td class="py-1 font-mono">{{ $this->serverIp }}</td>
+                                    </tr>
+                                </table>
+                                <p class="mt-2 text-xs text-neutral-500">
+                                    DNS propagation usually takes 5-30 minutes. Click <strong>Redeploy</strong> after pointing DNS — Traefik will issue a Let's Encrypt certificate automatically.
+                                </p>
+                            </div>
+                        @endif
+                    </div>
+                @endif
+            </section>
+
+            <section class="mt-8">
                 <h2 class="mb-3">Environment variables</h2>
                 @php
                     $envs = $application->environment_variables->where('resourceable_type', \App\Models\Application::class);

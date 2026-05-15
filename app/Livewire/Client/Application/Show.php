@@ -5,6 +5,7 @@ namespace App\Livewire\Client\Application;
 use App\Models\Application;
 use App\Models\EnvironmentVariable;
 use App\Models\SubTeam;
+use App\Rules\ValidHostname;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -22,6 +23,8 @@ class Show extends Component
     public string $newEnvValue = '';
 
     public array $envEdits = [];
+
+    public string $customDomain = '';
 
     public function mount(string $applicationUuid): void
     {
@@ -50,6 +53,67 @@ class Show extends Component
             ->where('resourceable_type', Application::class)
             ->mapWithKeys(fn ($e) => [$e->id => $e->value])
             ->toArray();
+        // Strip scheme for the editable field; we'll re-add on save.
+        $this->customDomain = str_replace(['https://', 'http://'], '', $application->fqdn ?? '');
+    }
+
+    public function getServerIpProperty(): ?string
+    {
+        return $this->subTeam->offer?->server?->ip;
+    }
+
+    public function getCustomDomainAllowedProperty(): bool
+    {
+        return (bool) ($this->subTeam->offer?->allow_custom_domain ?? false);
+    }
+
+    public function saveCustomDomain(): void
+    {
+        if (! $this->customDomainAllowed) {
+            $this->addError('customDomain', 'Custom domains are not enabled on your hosting plan.');
+
+            return;
+        }
+
+        $value = trim($this->customDomain);
+
+        // Clearing the domain — back to whatever Coolify's default routing gives.
+        if ($value === '') {
+            $this->application->update(['fqdn' => null]);
+            $this->dispatch('toast', ['type' => 'success', 'message' => 'Custom domain removed.']);
+
+            return;
+        }
+
+        // Allow user to paste "https://foo.com" or just "foo.com"; normalize to hostname.
+        $value = str_replace(['https://', 'http://'], '', $value);
+        $value = rtrim($value, '/');
+        // Reflect the normalized value back to the component property so
+        // $this->validate() sees the cleaned hostname (not the pasted URL).
+        $this->customDomain = $value;
+
+        $this->validate([
+            'customDomain' => ['required', 'string', new ValidHostname],
+        ], [], ['customDomain' => 'custom domain']);
+
+        // Guard against the same FQDN already being used by another Application
+        // on this team's server. Two apps fighting for the same domain via
+        // Traefik silently routes to whoever registered first — protect the
+        // Client from a confusing outcome.
+        $conflict = Application::query()
+            ->where('fqdn', 'https://'.$value)
+            ->where('id', '!=', $this->application->id)
+            ->whereHas('environment.project', fn ($q) => $q->where('team_id', $this->subTeam->parent_team_id))
+            ->exists();
+        if ($conflict) {
+            $this->addError('customDomain', "{$value} is already routed to another application on this server.");
+
+            return;
+        }
+
+        $this->application->update(['fqdn' => 'https://'.$value]);
+        $this->customDomain = $value;
+        $this->dispatch('toast', ['type' => 'success', 'message' => 'Custom domain saved. Redeploy to provision the TLS certificate.']);
     }
 
     public function deploy(): void
