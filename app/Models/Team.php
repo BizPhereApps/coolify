@@ -116,7 +116,7 @@ class Team extends Model implements SendsDiscord, SendsEmail, SendsPushover, Sen
     public function subscriptionPastOverDue()
     {
         if (isCloud()) {
-            return $this->subscription?->stripe_past_due;
+            return $this->subscription?->isPastDue() === true;
         }
 
         return false;
@@ -221,11 +221,10 @@ class Team extends Model implements SendsDiscord, SendsEmail, SendsPushover, Sen
         }
 
         $this->subscription->update([
-            'stripe_subscription_id' => null,
-            'stripe_cancel_at_period_end' => false,
-            'stripe_invoice_paid' => false,
-            'stripe_trial_already_ended' => false,
-            'stripe_past_due' => false,
+            'status' => \App\Models\Subscription::STATUS_CANCELLED,
+            'paystack_subscription_code' => null,
+            'cancel_at_period_end' => false,
+            'cancelled_at' => now(),
         ]);
         foreach ($this->servers as $server) {
             $server->settings()->update([

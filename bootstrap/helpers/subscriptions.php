@@ -1,9 +1,8 @@
 <?php
 
 use App\Models\Team;
-use Stripe\Stripe;
 
-function isSubscriptionActive()
+function isSubscriptionActive(): bool
 {
     return once(function () {
         if (! isCloud()) {
@@ -17,72 +16,52 @@ function isSubscriptionActive()
         if ($team->id === 0) {
             return true;
         }
-        $subscription = $team?->subscription;
 
-        if (is_null($subscription)) {
-            return false;
-        }
-        if (isStripe()) {
-            return $subscription->stripe_invoice_paid === true;
-        }
-
-        return false;
+        return $team->subscription?->isActive() === true;
     });
 }
 
-function isSubscriptionOnGracePeriod()
+function isSubscriptionOnGracePeriod(): bool
 {
     return once(function () {
         $team = currentTeam();
         if (! $team) {
             return false;
         }
-        $subscription = $team?->subscription;
-        if (! $subscription) {
-            return false;
-        }
-        if (isStripe()) {
-            return $subscription->stripe_cancel_at_period_end;
-        }
 
-        return false;
+        return (bool) $team->subscription?->cancel_at_period_end;
     });
 }
-function subscriptionProvider()
+
+function subscriptionProvider(): ?string
 {
     return config('subscription.provider');
 }
-function isStripe()
-{
-    return config('subscription.provider') === 'stripe';
-}
-function getStripeCustomerPortalSession(Team $team)
-{
-    Stripe::setApiKey(config('subscription.stripe_api_key'));
-    $return_url = route('subscription.show');
-    $stripe_customer_id = data_get($team, 'subscription.stripe_customer_id');
-    if (! $stripe_customer_id) {
-        return null;
-    }
 
-    return \Stripe\BillingPortal\Session::create([
-        'customer' => $stripe_customer_id,
-        'return_url' => $return_url,
-    ]);
+function isPaystack(): bool
+{
+    return config('subscription.provider') === 'paystack';
 }
-function allowedPathsForUnsubscribedAccounts()
+
+function allowedPathsForUnsubscribedAccounts(): array
 {
     return [
         'subscription/new',
+        'subscription',
+        'pricing',
         'login',
         'logout',
         'force-password-reset',
         'two-factor-challenge',
         'livewire/update',
         'admin',
+        'payments/paystack/callback',
+        'payments/paystack/events',
+        'legal/source',
     ];
 }
-function allowedPathsForBoardingAccounts()
+
+function allowedPathsForBoardingAccounts(): array
 {
     return [
         ...allowedPathsForUnsubscribedAccounts(),
@@ -90,7 +69,8 @@ function allowedPathsForBoardingAccounts()
         'livewire/update',
     ];
 }
-function allowedPathsForInvalidAccounts()
+
+function allowedPathsForInvalidAccounts(): array
 {
     return [
         'logout',
@@ -99,23 +79,4 @@ function allowedPathsForInvalidAccounts()
         'two-factor-challenge',
         'livewire/update',
     ];
-}
-
-function updateStripeCustomerEmail(Team $team, string $newEmail): void
-{
-    if (! isStripe()) {
-        return;
-    }
-
-    $stripe_customer_id = data_get($team, 'subscription.stripe_customer_id');
-    if (! $stripe_customer_id) {
-        return;
-    }
-
-    Stripe::setApiKey(config('subscription.stripe_api_key'));
-
-    \Stripe\Customer::update(
-        $stripe_customer_id,
-        ['email' => $newEmail]
-    );
 }

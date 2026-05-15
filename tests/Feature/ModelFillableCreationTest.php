@@ -1065,26 +1065,32 @@ it('creates GithubApp with all fillable attributes', function () {
 });
 
 it('creates Subscription with all fillable attributes', function () {
+    $plan = \App\Models\Plan::firstOrCreate(['code' => 'pro'], [
+        'name' => 'Pro',
+        'price_ngn_monthly' => 15000,
+        'max_servers' => 5,
+        'max_apps' => 0,
+        'max_databases' => 0,
+        'max_team_members' => 5,
+    ]);
+
     $sub = Subscription::create([
         'team_id' => $this->team->id,
-        'stripe_invoice_paid' => true,
-        'stripe_subscription_id' => 'sub_1234567890',
-        'stripe_customer_id' => 'cus_1234567890',
-        'stripe_cancel_at_period_end' => false,
-        'stripe_plan_id' => 'price_1234567890',
-        'stripe_feedback' => 'Great service',
-        'stripe_comment' => 'Will renew',
-        'stripe_trial_already_ended' => true,
-        'stripe_past_due' => false,
-        'stripe_refunded_at' => null,
+        'plan_id' => $plan->id,
+        'paystack_subscription_code' => 'SUB_abc123',
+        'paystack_customer_code' => 'CUS_abc123',
+        'status' => Subscription::STATUS_ACTIVE,
+        'period' => Subscription::PERIOD_MONTHLY,
+        'current_period_end' => now()->addMonth(),
+        'cancel_at_period_end' => false,
     ]);
 
     expect($sub->exists)->toBeTrue();
     expect($sub->team_id)->toBe($this->team->id);
-    expect($sub->stripe_subscription_id)->toBe('sub_1234567890');
-    expect($sub->stripe_customer_id)->toBe('cus_1234567890');
-    expect($sub->stripe_plan_id)->toBe('price_1234567890');
-    expect($sub->stripe_invoice_paid)->toBeTrue();
+    expect($sub->plan_id)->toBe($plan->id);
+    expect($sub->paystack_subscription_code)->toBe('SUB_abc123');
+    expect($sub->paystack_customer_code)->toBe('CUS_abc123');
+    expect($sub->isActive())->toBeTrue();
 });
 
 it('creates CloudProviderToken with all fillable attributes', function () {

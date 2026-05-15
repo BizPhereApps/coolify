@@ -244,7 +244,7 @@ class ScheduledJobDiagnostics extends Command
         }
 
         if (isCloud()) {
-            $servers = $query->whereRelation('team.subscription', 'stripe_invoice_paid', true)->get();
+            $servers = $query->whereHas('team.subscription', fn ($q) => $q->active())->get();
             $own = Team::find(0)?->servers()->with('settings')->get() ?? collect();
 
             return $servers->merge($own);

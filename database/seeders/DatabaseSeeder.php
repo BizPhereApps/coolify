@@ -10,6 +10,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             InstanceSettingsSeeder::class,
+            PlanSeeder::class,
             UserSeeder::class,
             TeamSeeder::class,
             PrivateKeySeeder::class,

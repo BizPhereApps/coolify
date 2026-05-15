@@ -98,7 +98,7 @@ class RunScheduledJobsManually extends Command
                 continue;
             }
 
-            if (isCloud() && data_get($server->team->subscription, 'stripe_invoice_paid', false) === false && $server->team->id !== 0) {
+            if (isCloud() && $server->team->id !== 0 && ! $server->team->subscription?->isActive()) {
                 $this->warn("Skipping backup {$scheduled_backup->id} - subscription not paid");
 
                 continue;
@@ -185,7 +185,7 @@ class RunScheduledJobsManually extends Command
                 continue;
             }
 
-            if (isCloud() && data_get($server->team->subscription, 'stripe_invoice_paid', false) === false && $server->team->id !== 0) {
+            if (isCloud() && $server->team->id !== 0 && ! $server->team->subscription?->isActive()) {
                 $this->warn("Skipping task {$scheduled_task->id} - subscription not paid");
 
                 continue;

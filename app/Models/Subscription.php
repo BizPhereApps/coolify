@@ -2,80 +2,103 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Subscription extends Model
 {
+    use HasFactory;
+
+    public const STATUS_TRIALING = 'trialing';
+
+    public const STATUS_ACTIVE = 'active';
+
+    public const STATUS_PAST_DUE = 'past_due';
+
+    public const STATUS_CANCELLED = 'cancelled';
+
+    public const STATUS_INCOMPLETE = 'incomplete';
+
+    public const PERIOD_MONTHLY = 'monthly';
+
+    public const PERIOD_ANNUAL = 'annual';
+
     protected $fillable = [
         'team_id',
-        'stripe_invoice_paid',
-        'stripe_subscription_id',
-        'stripe_customer_id',
-        'stripe_cancel_at_period_end',
-        'stripe_plan_id',
-        'stripe_feedback',
-        'stripe_comment',
-        'stripe_trial_already_ended',
-        'stripe_past_due',
-        'stripe_refunded_at',
+        'plan_id',
+        'paystack_subscription_code',
+        'paystack_customer_code',
+        'paystack_email_token',
+        'status',
+        'period',
+        'trial_ends_at',
+        'current_period_start',
+        'current_period_end',
+        'cancel_at_period_end',
+        'cancelled_at',
+        'last_payment_failed_at',
+        'refunded_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'stripe_refunded_at' => 'datetime',
+            'trial_ends_at' => 'datetime',
+            'current_period_start' => 'datetime',
+            'current_period_end' => 'datetime',
+            'cancelled_at' => 'datetime',
+            'last_payment_failed_at' => 'datetime',
+            'refunded_at' => 'datetime',
+            'cancel_at_period_end' => 'boolean',
         ];
     }
 
-    public function team()
+    public function team(): BelongsTo
     {
         return $this->belongsTo(Team::class);
     }
 
-    public function billingInterval(): string
+    public function plan(): BelongsTo
     {
-        if ($this->stripe_plan_id) {
-            $configKey = collect(config('subscription'))
-                ->search($this->stripe_plan_id);
-
-            if ($configKey && str($configKey)->contains('yearly')) {
-                return 'yearly';
-            }
-        }
-
-        return 'monthly';
+        return $this->belongsTo(Plan::class);
     }
 
-    public function type()
+    public function isActive(): bool
     {
-        if (isStripe()) {
-            if (! $this->stripe_plan_id) {
-                return 'zero';
-            }
-            $subscription = Subscription::where('id', $this->id)->first();
-            if (! $subscription) {
-                return null;
-            }
-            $subscriptionPlanId = data_get($subscription, 'stripe_plan_id');
-            if (! $subscriptionPlanId) {
-                return null;
-            }
-            $subscriptionInvoicePaid = data_get($subscription, 'stripe_invoice_paid');
-            if (! $subscriptionInvoicePaid) {
-                return null;
-            }
-            $subscriptionConfigs = collect(config('subscription'));
-            $stripePlanId = null;
-            $subscriptionConfigs->map(function ($value, $key) use ($subscriptionPlanId, &$stripePlanId) {
-                if ($value === $subscriptionPlanId) {
-                    $stripePlanId = $key;
-                }
-            })->first();
-            if ($stripePlanId) {
-                return str($stripePlanId)->after('stripe_price_id_')->before('_')->lower();
-            }
-        }
+        return in_array($this->status, [self::STATUS_TRIALING, self::STATUS_ACTIVE], true);
+    }
 
-        return 'zero';
+    public function isOnTrial(): bool
+    {
+        return $this->status === self::STATUS_TRIALING
+            && $this->trial_ends_at
+            && $this->trial_ends_at->isFuture();
+    }
+
+    public function isPastDue(): bool
+    {
+        return $this->status === self::STATUS_PAST_DUE;
+    }
+
+    public function isCancelled(): bool
+    {
+        return $this->status === self::STATUS_CANCELLED;
+    }
+
+    public function billingInterval(): string
+    {
+        return $this->period === self::PERIOD_ANNUAL ? 'yearly' : 'monthly';
+    }
+
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->whereIn('status', [self::STATUS_TRIALING, self::STATUS_ACTIVE]);
+    }
+
+    public function scopeInactive(Builder $query): Builder
+    {
+        return $query->whereNotIn('status', [self::STATUS_TRIALING, self::STATUS_ACTIVE]);
     }
 }

@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Jobs\UpdateStripeCustomerEmailJob;
 use App\Notifications\Channels\SendsEmail;
 use App\Notifications\TransactionalEmails\EmailChangeVerification;
 use App\Notifications\TransactionalEmails\ResetPassword as TransactionalEmailsResetPassword;
@@ -448,16 +447,7 @@ class User extends Authenticatable implements SendsEmail
             'email_change_code_expires_at' => null,
         ]);
 
-        // For cloud users, dispatch job to update Stripe customer email asynchronously
-        $currentTeam = $this->currentTeam();
-        if (isCloud() && $currentTeam?->subscription) {
-            dispatch(new UpdateStripeCustomerEmailJob(
-                $currentTeam,
-                $this->id,
-                $newEmail,
-                $oldEmail
-            ));
-        }
+        // TODO(nolbase phase 3): dispatch a Paystack customer-email update job here.
 
         return true;
     }

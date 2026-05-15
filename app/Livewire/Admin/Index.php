@@ -54,8 +54,8 @@ class Index extends Component
 
     public function getSubscribers()
     {
-        $this->inactiveSubscribers = Team::whereRelation('subscription', 'stripe_invoice_paid', false)->count();
-        $this->activeSubscribers = Team::whereRelation('subscription', 'stripe_invoice_paid', true)->count();
+        $this->inactiveSubscribers = Team::whereHas('subscription', fn ($q) => $q->inactive())->count();
+        $this->activeSubscribers = Team::whereHas('subscription', fn ($q) => $q->active())->count();
     }
 
     public function switchUser(int $user_id)

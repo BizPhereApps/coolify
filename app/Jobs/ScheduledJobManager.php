@@ -290,7 +290,7 @@ class ScheduledJobManager implements ShouldQueue
             return 'server_not_functional';
         }
 
-        if (isCloud() && data_get($server->team->subscription, 'stripe_invoice_paid', false) === false && $server->team->id !== 0) {
+        if (isCloud() && $server->team->id !== 0 && ! $server->team->subscription?->isActive()) {
             return 'subscription_unpaid';
         }
 
@@ -309,7 +309,7 @@ class ScheduledJobManager implements ShouldQueue
             return 'server_not_functional';
         }
 
-        if (isCloud() && data_get($server->team->subscription, 'stripe_invoice_paid', false) === false && $server->team->id !== 0) {
+        if (isCloud() && $server->team->id !== 0 && ! $server->team->subscription?->isActive()) {
             return 'subscription_unpaid';
         }
 
@@ -395,7 +395,7 @@ class ScheduledJobManager implements ShouldQueue
             ->where('ip', '!=', '1.2.3.4');
 
         if (isCloud()) {
-            $servers = $query->whereRelation('team.subscription', 'stripe_invoice_paid', true)->get();
+            $servers = $query->whereHas('team.subscription', fn ($q) => $q->active())->get();
             $own = Team::find(0)->servers()->with('settings')->get();
 
             return $servers->merge($own);
@@ -412,7 +412,7 @@ class ScheduledJobManager implements ShouldQueue
 
         // In cloud, check subscription status (except team 0)
         if (isCloud() && $server->team_id !== 0) {
-            if (data_get($server->team->subscription, 'stripe_invoice_paid', false) === false) {
+            if (! $server->team->subscription?->isActive()) {
                 return 'subscription_unpaid';
             }
         }

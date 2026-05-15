@@ -233,7 +233,7 @@ Route::group([
             return response()->json(['message' => 'Server not found'], 404);
         }
 
-        if (isCloud() && data_get($server->team->subscription, 'stripe_invoice_paid', false) === false && $server->team->id !== 0) {
+        if (isCloud() && $server->team->id !== 0 && ! $server->team->subscription?->isActive()) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 

@@ -182,7 +182,7 @@ test('convertContainerEnvsToArray', function () {
               "Env": [
                   "RAY_ENABLED=true=123",
                   "REGISTRY_URL=docker.io",
-                  "SUBSCRIPTION_PROVIDER=stripe",
+                  "SUBSCRIPTION_PROVIDER=paystack",
                   "TELESCOPE_ENABLED=false",
                   "POSTGRES_HOST_AUTH_METHOD=trust",
                   "DB_PASSWORD=password",

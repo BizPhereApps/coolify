@@ -50,7 +50,7 @@ class CleanupStuckedResources extends Command
             });
             if (isCloud()) {
                 $servers = $servers->filter(function ($server) {
-                    return data_get($server->team->subscription, 'stripe_invoice_paid', false) === true;
+                    return $server->team->subscription?->isActive() === true;
                 });
             }
             foreach ($servers as $server) {

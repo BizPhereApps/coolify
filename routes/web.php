@@ -78,8 +78,6 @@ use App\Livewire\SharedVariables\Team\Index as TeamSharedVariablesIndex;
 use App\Livewire\Source\Github\Change as GitHubChange;
 use App\Livewire\Storage\Index as StorageIndex;
 use App\Livewire\Storage\Show as StorageShow;
-use App\Livewire\Subscription\Index as SubscriptionIndex;
-use App\Livewire\Subscription\Show as SubscriptionShow;
 use App\Livewire\Tags\Show as TagsShow;
 use App\Livewire\Team\AdminView as TeamAdminView;
 use App\Livewire\Team\Index as TeamIndex;
@@ -112,8 +110,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/admin', AdminIndex::class)->name('admin.index');
     Route::get('/onboarding', BoardingIndex::class)->name('onboarding');
 
-    Route::get('/subscription', SubscriptionShow::class)->name('subscription.show');
-    Route::get('/subscription/new', SubscriptionIndex::class)->name('subscription.index');
+    // Subscription routes will be rebuilt in Step 3 (Paystack layer).
 
     Route::get('/settings', SettingsIndex::class)->name('settings.index');
     Route::get('/settings/advanced', SettingsAdvanced::class)->name('settings.advanced');
