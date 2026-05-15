@@ -2,7 +2,9 @@
 
 namespace App\Livewire\Client\Application;
 
+use App\Enums\ProcessStatus;
 use App\Models\Application;
+use App\Models\ApplicationDeploymentQueue;
 use App\Models\EnvironmentVariable;
 use App\Models\SubTeam;
 use App\Rules\ValidHostname;
@@ -65,6 +67,44 @@ class Show extends Component
     public function getCustomDomainAllowedProperty(): bool
     {
         return (bool) ($this->subTeam->offer?->allow_custom_domain ?? false);
+    }
+
+    public function getLatestDeploymentProperty(): ?ApplicationDeploymentQueue
+    {
+        return ApplicationDeploymentQueue::query()
+            ->where('application_id', $this->application->id)
+            ->orderByDesc('created_at')
+            ->first();
+    }
+
+    /**
+     * Polling-friendly: the view's wire:poll renders this and returns the
+     * JSON-decoded log entries. Empty array if no logs yet.
+     *
+     * @return array<int, array{name?: string, output?: string, time?: string}>
+     */
+    public function getLatestDeploymentLogsProperty(): array
+    {
+        $deployment = $this->latestDeployment;
+        if (! $deployment?->logs) {
+            return [];
+        }
+        $decoded = json_decode($deployment->logs, associative: true);
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    public function getIsDeploymentInProgressProperty(): bool
+    {
+        $status = $this->latestDeployment?->status;
+        if (! $status) {
+            return false;
+        }
+
+        return in_array($status, [
+            ProcessStatus::QUEUED->value,
+            ProcessStatus::IN_PROGRESS->value,
+        ], true);
     }
 
     public function saveCustomDomain(): void

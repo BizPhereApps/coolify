@@ -31,6 +31,56 @@
                 </div>
             </div>
 
+            @if ($this->latestDeployment)
+                <section class="mt-8" @if ($this->isDeploymentInProgress) wire:poll.3s @endif>
+                    <div class="mb-3 flex items-baseline justify-between">
+                        <h2>Latest deployment</h2>
+                        @php
+                            $depStatus = $this->latestDeployment->status;
+                            $depColor = match ($depStatus) {
+                                'finished' => 'text-success',
+                                'error', 'failed', 'killed', 'cancelled' => 'text-error',
+                                'in_progress', 'queued' => 'text-warning',
+                                default => 'text-neutral-500',
+                            };
+                        @endphp
+                        <span class="rounded-full bg-coolgray-200 px-2 py-0.5 text-xs {{ $depColor }}">
+                            {{ $depStatus }}
+                            @if ($this->isDeploymentInProgress)
+                                <span class="ml-1 animate-pulse">●</span>
+                            @endif
+                        </span>
+                    </div>
+                    <div class="rounded-md border border-coolgray-200 bg-coolgray-100 p-4">
+                        <div class="mb-2 text-xs text-neutral-500">
+                            {{ $this->latestDeployment->commit ?? 'HEAD' }}
+                            @if ($this->latestDeployment->commit_message)
+                                · {{ $this->latestDeployment->commit_message }}
+                            @endif
+                            · started {{ $this->latestDeployment->created_at?->diffForHumans() }}
+                            @if ($this->latestDeployment->finished_at)
+                                · finished {{ $this->latestDeployment->finished_at->diffForHumans() }}
+                            @endif
+                        </div>
+                        @if (empty($this->latestDeploymentLogs))
+                            <p class="text-sm text-neutral-500">No logs yet — deployment is starting…</p>
+                        @else
+                            <div class="max-h-96 overflow-y-auto rounded bg-base p-3 font-mono text-xs">
+                                @foreach ($this->latestDeploymentLogs as $entry)
+                                    <div class="border-l-2 border-coolgray-300 pl-2 mb-2">
+                                        <div class="text-neutral-500">
+                                            @if (data_get($entry, 'name')) [{{ data_get($entry, 'name') }}] @endif
+                                            @if (data_get($entry, 'time')) <span class="text-neutral-600">{{ data_get($entry, 'time') }}</span> @endif
+                                        </div>
+                                        <pre class="whitespace-pre-wrap text-neutral-300">{{ data_get($entry, 'output', '') }}</pre>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                </section>
+            @endif
+
             <section class="mt-8">
                 <h2 class="mb-3">Custom domain</h2>
                 @if (! $this->customDomainAllowed)
