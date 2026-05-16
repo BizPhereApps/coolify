@@ -32,14 +32,42 @@
                         @error('name') <p class="mt-1 text-xs text-error">{{ $message }}</p> @enderror
                     </div>
 
+                    @if ($this->availableGithubApps->isNotEmpty())
+                        <div>
+                            <label class="mb-1 block text-sm font-semibold">Source</label>
+                            <select wire:model.live="sourceId" class="w-full rounded border border-coolgray-200 bg-coolgray-100 px-3 py-2 text-sm">
+                                <option value="">Public Git URL</option>
+                                @foreach ($this->availableGithubApps as $app)
+                                    <option value="{{ $app->id }}">GitHub: {{ $app->name }} ({{ $app->organization }})</option>
+                                @endforeach
+                            </select>
+                            @error('sourceId') <p class="mt-1 text-xs text-error">{{ $message }}</p> @enderror
+                            <p class="mt-1 text-xs text-neutral-500">
+                                Pick a GitHub App your developer has set up to deploy from private repos under that organization.
+                            </p>
+                        </div>
+                    @endif
+
                     <div>
-                        <label class="mb-1 block text-sm font-semibold">Git repository</label>
+                        <label class="mb-1 block text-sm font-semibold">
+                            @if ($sourceId)
+                                Private repo (owner/repo)
+                            @else
+                                Git repository URL
+                            @endif
+                        </label>
                         <input wire:model="git_repository" type="text"
-                               placeholder="https://github.com/bola/shop.git"
+                               placeholder="{{ $sourceId ? 'bola/shop' : 'https://github.com/bola/shop.git' }}"
                                class="w-full rounded border border-coolgray-200 bg-coolgray-100 px-3 py-2 text-sm font-mono" />
                         @error('git_repository') <p class="mt-1 text-xs text-error">{{ $message }}</p> @enderror
                         <p class="mt-1 text-xs text-neutral-500">
-                            Public repos work out of the box. For private repos, contact your developer to set up GitHub access.
+                            @if ($sourceId)
+                                Format: <span class="font-mono">owner/repo</span> — the GitHub App's installation token handles authentication at deploy time.
+                            @elseif ($this->availableGithubApps->isEmpty())
+                                Public repos work out of the box. For private repos, ask {{ $subTeam->parentTeam->name }} to install a GitHub App.
+                            @else
+                                Or paste any public Git URL.
+                            @endif
                         </p>
                     </div>
 
