@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\DatabasesController;
 use App\Http\Controllers\Api\DeployController;
 use App\Http\Controllers\Api\GithubController;
 use App\Http\Controllers\Api\HetznerController;
+use App\Http\Controllers\Api\NolbaseHealthController;
 use App\Http\Controllers\Api\OtherController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\ResourcesController;
@@ -25,6 +26,12 @@ Route::group([
 ], function () {
     Route::get('/health', [OtherController::class, 'healthcheck']);
 });
+
+// Nolbase: component-level health endpoint with per-system checks.
+// Returns 200 when all critical checks pass, 503 if DB or Redis is down.
+// Pass ?deep=1 to also probe Paystack reachability (informational only).
+Route::get('/nolbase/health', [NolbaseHealthController::class, 'show'])
+    ->name('nolbase.health');
 
 Route::post('/feedback', [OtherController::class, 'feedback'])
     ->middleware('throttle:feedback');

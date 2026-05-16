@@ -255,7 +255,9 @@ docker exec coolify php artisan nolbase:preflight --strict
 
 ### 5.1 Smoke checks immediately after deploy
 
-- [ ] `curl https://app.nolbase.com/api/health` → 200 OK
+- [ ] `curl https://app.nolbase.com/api/health` → 200 OK (trivial liveness)
+- [ ] `curl https://app.nolbase.com/api/nolbase/health` → 200 with `"status":"healthy"`. Component-level: DB + Redis. Wire this into your uptime monitor.
+- [ ] `curl 'https://app.nolbase.com/api/nolbase/health?deep=1'` → also probes Paystack reachability (do not poll this from monitoring — once per deploy is enough)
 - [ ] `curl -I https://app.nolbase.com/login` → 200, valid TLS
 - [ ] `curl -I https://app.nolbase.com/legal/source` → 200, page shows your real public repo URL
 - [ ] `curl -I https://app.nolbase.com/register` → 200
@@ -412,7 +414,9 @@ Wire these up **before** the first signup, not after.
 ### 9.2 Application monitoring
 
 - [ ] Error tracking — Sentry or Bugsnag. Free tier is fine to start. Set `SENTRY_LARAVEL_DSN` in `.env`.
-- [ ] Uptime monitor — Better Stack, UptimeRobot, etc. Probe `/api/health` every 60s.
+- [ ] Uptime monitor — Better Stack, UptimeRobot, etc.
+    - Liveness probe → `/api/health` every 60s (trivially returns 200 if PHP is alive)
+    - Readiness/component probe → `/api/nolbase/health` every 60s. Alert on `status:"degraded"` or HTTP 503. This catches DB/Redis outages that `/api/health` will miss.
 - [ ] Status page — `status.nolbase.com` (optional but recommended once you have paying customers).
 
 ### 9.3 Business metrics dashboard
