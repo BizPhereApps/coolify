@@ -67,6 +67,30 @@
                 </x-modal-input>
             </div>
 
+            @if (\App\Models\NolbaseSetting::read('nolbase_hetzner_api_token') || env('NOLBASE_HETZNER_API_TOKEN'))
+                <div>
+                    <x-modal-input title="Nolbase-managed server">
+                        <x-slot:content>
+                            <div class="relative gap-2 cursor-pointer coolbox group border border-coollabs/40">
+                                <div class="flex items-center gap-4 mx-6">
+                                    <svg class="w-10 h-10 flex-shrink-0" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                                        <rect width="32" height="32" fill="#2F6BFF" rx="6" />
+                                        <path fill="#fff" d="M8 22V10l8 6 8-6v12h-3v-7l-5 4-5-4v7z" />
+                                    </svg>
+                                    <div class="flex flex-col justify-center flex-1">
+                                        <div class="box-title">Nolbase-managed server</div>
+                                        <div class="box-description">
+                                            We provision and operate the infrastructure. You only see Coolify. From ₦12,750/month.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </x-slot:content>
+                        <livewire:server.new.nolbase-managed />
+                    </x-modal-input>
+                </div>
+            @endif
+
             <div class="border-t dark:border-coolgray-300 my-4"></div>
         @endcan
 

@@ -45,6 +45,26 @@ class Settings extends Component
             'description' => 'Optional system-wide message shown to all tenants. Leave blank to hide.',
             'placeholder' => 'Scheduled maintenance Sunday 02:00 UTC',
         ],
+        'nolbase_hetzner_api_token' => [
+            'label' => 'Nolbase-managed: Hetzner API token',
+            'description' => "Nolbase's own Hetzner Cloud API token. Used to provision managed servers on Nolbase's account. Visible only to staff+. Leave blank to disable Nolbase-managed hosting.",
+            'placeholder' => 'eyJfMA...',
+        ],
+        'nolbase_hetzner_ssh_pubkey' => [
+            'label' => 'Nolbase-managed: SSH public key',
+            'description' => "Public half of Nolbase's master SSH key. Injected into every managed server at provisioning time. Paste the full 'ssh-ed25519 AAAA... comment' line.",
+            'placeholder' => 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5...',
+        ],
+        'nolbase_hetzner_ssh_private_key' => [
+            'label' => 'Nolbase-managed: SSH private key',
+            'description' => "Matching PRIVATE key (OpenSSH format, full -----BEGIN... block). Stored encrypted at rest. Required for Coolify to SSH into managed servers.",
+            'placeholder' => '-----BEGIN OPENSSH PRIVATE KEY-----',
+        ],
+        'nolbase_default_markup_pct' => [
+            'label' => 'Nolbase-managed: markup percentage',
+            'description' => 'Default markup over the Hetzner cost basis. 50 means a €5 server is billed at ₦12,750 NGN (cost ≈ ₦8,500 × 1.5). Configurable per plan via nolbase_hetzner_cost_<slug>_ngn.',
+            'placeholder' => '50',
+        ],
     ];
 
     public array $values = [];
