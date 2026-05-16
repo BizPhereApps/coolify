@@ -77,6 +77,24 @@ class PaystackService
     }
 
     /**
+     * Charge a previously-saved card authorization without further user
+     * interaction. Used for Nolbase-managed-server monthly billing
+     * (variable amount across months as the tenant adds/removes servers,
+     * so it can't ride the fixed-price subscription plan).
+     */
+    public function chargeAuthorization(string $authorizationCode, string $email, int $amountNgn, ?string $reference = null, array $metadata = []): array
+    {
+        return $this->parse($this->client()->post('/transaction/charge_authorization', array_filter([
+            'authorization_code' => $authorizationCode,
+            'email' => $email,
+            'amount' => $amountNgn * 100,
+            'currency' => config('paystack.currency', 'NGN'),
+            'reference' => $reference,
+            'metadata' => $metadata ?: null,
+        ], static fn ($v) => $v !== null)));
+    }
+
+    /**
      * List supported NGN banks (used in the payout-account dropdown).
      */
     public function getBanks(string $country = 'nigeria'): array

@@ -62,6 +62,12 @@ class Kernel extends ConsoleKernel
                 ->weeklyOn(\Illuminate\Console\Scheduling\Schedule::MONDAY, '09:00')
                 ->timezone('Africa/Lagos')
                 ->onOneServer();
+
+            // Nolbase-managed monthly billing: 1st of every month at 02:00 UTC.
+            // Idempotent via unique (team_id, billing_month).
+            $this->scheduleInstance->job(new \App\Jobs\BillManagedServersJob)
+                ->monthlyOn(1, '02:00')
+                ->onOneServer();
         }
 
         if (isDev()) {

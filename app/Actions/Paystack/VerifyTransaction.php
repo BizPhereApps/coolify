@@ -43,6 +43,9 @@ class VerifyTransaction
         // always returns it on the subscription.create webhook.
         $emailToken = data_get($data, 'plan_object.subscription_email_token')
             ?? data_get($data, 'authorization.subscription_email_token');
+        // Phase 7.2: capture the authorization_code so Nolbase can charge for
+        // managed-server infrastructure on top of the fixed-price subscription.
+        $authorizationCode = data_get($data, 'authorization.authorization_code');
 
         $subscription = $team->subscription ?? new Subscription(['team_id' => $team->id]);
 
@@ -52,6 +55,7 @@ class VerifyTransaction
             'paystack_customer_code' => $customerCode ?? $subscription->paystack_customer_code,
             'paystack_subscription_code' => $subscriptionCode ?? $subscription->paystack_subscription_code,
             'paystack_email_token' => $emailToken ?? $subscription->paystack_email_token,
+            'paystack_authorization_code' => $authorizationCode ?? $subscription->paystack_authorization_code,
             'status' => Subscription::STATUS_ACTIVE,
             'period' => $period,
             'current_period_start' => now(),

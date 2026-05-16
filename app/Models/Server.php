@@ -137,6 +137,33 @@ class Server extends BaseModel
                     'Terminate or migrate them first via /reseller.'
                 );
             }
+
+            // Phase 7.2: if this is a Nolbase-managed server, destroy the
+            // underlying Hetzner droplet so we stop paying for it. Mark the
+            // tracking row decommissioned. Errors here are logged but do not
+            // block server deletion — Nolbase ops can clean up orphans manually
+            // if the Hetzner API misbehaves.
+            $managed = \App\Models\NolbaseManagedServer::where('server_id', $server->id)->first();
+            if ($managed && $managed->provider_resource_id) {
+                try {
+                    $token = \App\Models\NolbaseSetting::read('nolbase_hetzner_api_token')
+                        ?: env('NOLBASE_HETZNER_API_TOKEN');
+                    if ($token) {
+                        (new \App\Services\HetznerService($token))
+                            ->deleteServer((int) $managed->provider_resource_id);
+                    }
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('Hetzner destroy on Server delete failed', [
+                        'server_id' => $server->id,
+                        'hetzner_id' => $managed->provider_resource_id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+                $managed->update([
+                    'billing_status' => \App\Models\NolbaseManagedServer::BILLING_DECOMMISSIONED,
+                    'decommissioned_at' => now(),
+                ]);
+            }
         });
 
         static::saving(function ($server) {

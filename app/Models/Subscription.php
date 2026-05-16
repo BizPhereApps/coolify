@@ -31,6 +31,7 @@ class Subscription extends Model
         'paystack_subscription_code',
         'paystack_customer_code',
         'paystack_email_token',
+        'paystack_authorization_code',
         'status',
         'period',
         'trial_ends_at',
