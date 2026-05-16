@@ -105,6 +105,11 @@ Route::get('/auth/{provider}/callback', [OauthController::class, 'callback'])->n
 
 Route::view('/legal/source', 'legal.source')->name('legal.source');
 
+// Public marketing pricing page. The same Subscription\PricingPlans Livewire
+// renders here too; choose() already redirects to /login when no team is in
+// session, so the unauth visitor flow naturally funnels into signup.
+Route::view('/pricing', 'marketing.pricing')->name('marketing.pricing');
+
 // Marketplace (Phase 6) — public invitation accept page + Paystack callback
 // for client payments. Both must remain unauthenticated until the Client
 // completes the Paystack flow; VerifyClientTransaction creates the User
