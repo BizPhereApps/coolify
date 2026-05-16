@@ -107,6 +107,80 @@
                 </div>
             @endif
             @if ($buildPack !== 'dockercompose')
+                {{-- Nolbase.app free subdomain --}}
+                <div class="rounded-lg border border-coolgray-200/40 bg-coolgray-100 p-4">
+                    <h3 class="mb-3 text-sm font-semibold">Nolbase Subdomain</h3>
+
+                    @if ($application->nolbase_subdomain)
+                        {{-- Subdomain is active --}}
+                        <div class="flex items-center gap-3">
+                            <div class="flex-1">
+                                <p class="text-sm text-neutral-400">Your app is available at:</p>
+                                <a href="https://{{ $application->nolbase_subdomain }}.{{ config('nolbase.app_domain', 'nolbase.app') }}"
+                                    target="_blank" rel="noopener"
+                                    class="font-mono text-sm text-coollabs hover:underline">
+                                    {{ $application->nolbase_subdomain }}.{{ config('nolbase.app_domain', 'nolbase.app') }}
+                                </a>
+                                <p class="mt-1 text-xs text-neutral-500">
+                                    Changes take effect after the next deploy. Add your own domain below to remove this subdomain.
+                                </p>
+                            </div>
+                            @can('update', $application)
+                                <x-modal-confirmation title="Remove Nolbase Subdomain?"
+                                    buttonTitle="Remove"
+                                    submitAction="deregisterNolbaseSubdomain"
+                                    :actions="['The DNS record for ' . $application->nolbase_subdomain . '.' . config('nolbase.app_domain', 'nolbase.app') . ' will be deleted.', 'The subdomain will become available for other developers.', 'Redeploy to apply.']"
+                                    confirmationText="{{ $application->nolbase_subdomain }}"
+                                    confirmationLabel="Type the subdomain to confirm"
+                                    shortConfirmationLabel="Subdomain"
+                                    :confirmWithPassword="false"
+                                    step2ButtonText="Remove Subdomain">
+                                    <x-slot:customButton>
+                                        <div class="text-xs">Remove</div>
+                                    </x-slot:customButton>
+                                </x-modal-confirmation>
+                            @endcan
+                        </div>
+                    @else
+                        {{-- No subdomain yet — show claim form --}}
+                        <p class="mb-3 text-xs text-neutral-400">
+                            Claim a free <span class="font-mono">*.{{ config('nolbase.app_domain', 'nolbase.app') }}</span> subdomain.
+                            It points directly at your server — no DNS setup needed. Replace it anytime with your own domain.
+                        </p>
+                        @can('update', $application)
+                            <div class="flex items-end gap-2">
+                                <div class="flex-1">
+                                    <x-forms.input
+                                        wire:model.live.debounce.500ms="nolbaseSubdomainInput"
+                                        wire:input="checkNolbaseSubdomainAvailability"
+                                        placeholder="my-app"
+                                        label="Subdomain"
+                                        helper="3–63 chars, lowercase, letters/numbers/hyphens. Globally unique."
+                                    />
+                                    @if ($nolbaseSubdomainStatus === 'available')
+                                        <p class="mt-1 text-xs text-green-400">
+                                            ✓ {{ $nolbaseSubdomainInput }}.{{ config('nolbase.app_domain', 'nolbase.app') }} is available
+                                        </p>
+                                    @elseif ($nolbaseSubdomainStatus === 'taken')
+                                        <p class="mt-1 text-xs text-red-400">✗ Already taken — try another name</p>
+                                    @elseif ($nolbaseSubdomainStatus === 'invalid')
+                                        <p class="mt-1 text-xs text-yellow-400">Invalid format</p>
+                                    @endif
+                                </div>
+                                <x-forms.button
+                                    wire:click="registerNolbaseSubdomain"
+                                    :disabled="$nolbaseSubdomainStatus !== 'available'"
+                                    class="shrink-0">
+                                    Claim
+                                </x-forms.button>
+                            </div>
+                            <p class="mt-2 font-mono text-xs text-neutral-500">
+                                → {{ $nolbaseSubdomainInput ?: 'yourapp' }}.{{ config('nolbase.app_domain', 'nolbase.app') }}
+                            </p>
+                        @endcan
+                    @endif
+                </div>
+
                 <div class="flex items-end gap-2">
                     @if ($application->settings->is_container_label_readonly_enabled == false)
                         <x-forms.input placeholder="https://coolify.io" wire:model="fqdn" label="Domains" readonly

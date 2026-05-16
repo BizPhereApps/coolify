@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Actions\Nolbase\DeregisterNolbaseSubdomain;
 use App\Enums\ApplicationDeploymentStatus;
 use App\Services\ConfigurationGenerator;
+use App\Support\PlanQuota;
 use App\Traits\ClearsGlobalSearchCache;
 use App\Traits\HasConfiguration;
 use App\Traits\HasMetrics;
@@ -122,6 +124,8 @@ class Application extends BaseModel
         'name',
         'description',
         'fqdn',
+        'nolbase_subdomain',
+        'nolbase_dns_record_id',
         'git_repository',
         'git_branch',
         'git_commit_sha',
@@ -233,9 +237,9 @@ class Application extends BaseModel
         static::creating(function ($application) {
             // Nolbase plan-quota enforcement: refuse to create apps beyond the team's plan limit.
             $team = currentTeam();
-            if ($team && \App\Support\PlanQuota::canAddApp($team) === false) {
-                $limit = \App\Support\PlanQuota::appLimit($team);
-                throw new \RuntimeException(
+            if ($team && PlanQuota::canAddApp($team) === false) {
+                $limit = PlanQuota::appLimit($team);
+                throw new RuntimeException(
                     "Your current plan allows a maximum of {$limit} application(s). Upgrade your plan to add more."
                 );
             }
@@ -351,6 +355,10 @@ class Application extends BaseModel
             }
         });
         static::forceDeleting(function ($application) {
+            // Clean up the nolbase.app DNS record before wiping the fqdn
+            if ($application->nolbase_subdomain) {
+                DeregisterNolbaseSubdomain::run($application);
+            }
             $application->update(['fqdn' => null]);
             $application->settings()->delete();
             $application->persistentStorages()->delete();

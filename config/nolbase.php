@@ -40,4 +40,21 @@ return [
     */
     'marketing_host' => env('NOLBASE_MARKETING_HOST'),
     'app_host' => env('NOLBASE_APP_HOST'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Nolbase.app — free default subdomain for deployed apps
+    |--------------------------------------------------------------------------
+    |
+    | Developers can claim a {slug}.nolbase.app subdomain for each deployed
+    | application. Nolbase creates a Cloudflare A record pointing directly
+    | at the app's server so Traefik issues TLS and routes traffic — same
+    | as a custom domain, but zero DNS setup for the developer.
+    |
+    | Requires a Cloudflare API token with Zone:DNS:Edit on the nolbase.app zone.
+    |
+    */
+    'app_domain' => env('NOLBASE_APP_DOMAIN', 'nolbase.app'),
+    'cloudflare_api_token' => env('CLOUDFLARE_API_TOKEN'),
+    'cloudflare_zone_id' => env('CLOUDFLARE_ZONE_ID'),
 ];

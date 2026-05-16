@@ -3,12 +3,17 @@
 namespace App\Livewire\Project\Application;
 
 use App\Actions\Application\GenerateConfig;
+use App\Actions\Nolbase\DeregisterNolbaseSubdomain;
+use App\Actions\Nolbase\RegisterNolbaseSubdomain;
 use App\Jobs\ApplicationDeploymentJob;
 use App\Models\Application;
+use App\Rules\ValidNolbaseSubdomain;
+use App\Services\NolbaseDnsService;
 use App\Support\ValidationPatterns;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Validator;
 use Livewire\Component;
 use Livewire\Features\SupportEvents\Event;
 use Spatie\Url\Url;
@@ -29,6 +34,11 @@ class General extends Component
     public ?string $description = null;
 
     public ?string $fqdn = null;
+
+    // nolbase.app subdomain management
+    public ?string $nolbaseSubdomainInput = null;
+
+    public ?string $nolbaseSubdomainStatus = null; // 'available' | 'taken' | 'invalid'
 
     public string $gitRepository;
 
@@ -904,6 +914,82 @@ class General extends Component
             return handleError($e, $this);
         } finally {
             $this->dispatch('configurationChanged');
+        }
+    }
+
+    public function checkNolbaseSubdomainAvailability(): void
+    {
+        $slug = strtolower(trim((string) $this->nolbaseSubdomainInput));
+
+        if ($slug === '') {
+            $this->nolbaseSubdomainStatus = null;
+
+            return;
+        }
+
+        $validator = Validator::make(
+            ['subdomain' => $slug],
+            ['subdomain' => ['required', 'string', new ValidNolbaseSubdomain]]
+        );
+
+        if ($validator->fails()) {
+            $this->nolbaseSubdomainStatus = 'invalid';
+
+            return;
+        }
+
+        $takenInDb = Application::query()
+            ->where('nolbase_subdomain', $slug)
+            ->where('id', '!=', $this->application->id)
+            ->exists();
+
+        if ($takenInDb) {
+            $this->nolbaseSubdomainStatus = 'taken';
+
+            return;
+        }
+
+        $dns = app(NolbaseDnsService::class);
+        if ($dns->isConfigured() && $dns->recordExists($slug)) {
+            $this->nolbaseSubdomainStatus = 'taken';
+
+            return;
+        }
+
+        $this->nolbaseSubdomainStatus = 'available';
+    }
+
+    public function registerNolbaseSubdomain(): void
+    {
+        try {
+            $this->authorize('update', $this->application);
+
+            $result = RegisterNolbaseSubdomain::run($this->application, (string) $this->nolbaseSubdomainInput);
+
+            $this->application->refresh();
+            $this->nolbaseSubdomainInput = null;
+            $this->nolbaseSubdomainStatus = null;
+            $this->dispatch('success', "Subdomain registered! Your app will be live at {$result['fqdn']} after the next deploy.");
+            $this->dispatch('configurationChanged');
+        } catch (\Throwable $e) {
+            return handleError($e, $this);
+        }
+    }
+
+    public function deregisterNolbaseSubdomain(): void
+    {
+        try {
+            $this->authorize('update', $this->application);
+
+            DeregisterNolbaseSubdomain::run($this->application);
+
+            $this->application->refresh();
+            $this->nolbaseSubdomainInput = null;
+            $this->nolbaseSubdomainStatus = null;
+            $this->dispatch('success', 'Nolbase subdomain removed.');
+            $this->dispatch('configurationChanged');
+        } catch (\Throwable $e) {
+            return handleError($e, $this);
         }
     }
 
