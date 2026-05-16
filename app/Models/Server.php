@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Actions\Provisioning\RefundManagedServerProRata;
 use App\Actions\Proxy\StartProxy;
 use App\Actions\Server\InstallDocker;
 use App\Actions\Server\InstallPrerequisites;
@@ -17,6 +18,7 @@ use App\Livewire\Server\Proxy;
 use App\Notifications\Server\Reachable;
 use App\Notifications\Server\Unreachable;
 use App\Services\ConfigurationRepository;
+use App\Services\HetznerService;
 use App\Traits\ClearsGlobalSearchCache;
 use App\Traits\HasMetrics;
 use App\Traits\HasSafeStringAttribute;
@@ -127,9 +129,9 @@ class Server extends BaseModel
         // SubTeams first (which is also where refunds happen). This protects
         // Clients from losing their hosting without notice.
         static::deleting(function ($server) {
-            $activeClients = \App\Models\SubTeam::query()
+            $activeClients = SubTeam::query()
                 ->whereNull('terminated_at')
-                ->whereIn('hosting_offer_id', \App\Models\HostingOffer::where('server_id', $server->id)->pluck('id'))
+                ->whereIn('hosting_offer_id', HostingOffer::where('server_id', $server->id)->pluck('id'))
                 ->count();
             if ($activeClients > 0) {
                 throw new \RuntimeException(
@@ -143,24 +145,41 @@ class Server extends BaseModel
             // tracking row decommissioned. Errors here are logged but do not
             // block server deletion — Nolbase ops can clean up orphans manually
             // if the Hetzner API misbehaves.
-            $managed = \App\Models\NolbaseManagedServer::where('server_id', $server->id)->first();
-            if ($managed && $managed->provider_resource_id) {
+            $managed = NolbaseManagedServer::where('server_id', $server->id)->first();
+            if ($managed) {
+                // Pro-rata refund FIRST while server.team_id is still queryable
+                // and the managed row still has its current billing_status.
+                // Errors are caught inside the action and logged — must not
+                // block deletion of the server.
                 try {
-                    $token = \App\Models\NolbaseSetting::read('nolbase_hetzner_api_token')
-                        ?: env('NOLBASE_HETZNER_API_TOKEN');
-                    if ($token) {
-                        (new \App\Services\HetznerService($token))
-                            ->deleteServer((int) $managed->provider_resource_id);
-                    }
+                    RefundManagedServerProRata::run($managed);
                 } catch (\Throwable $e) {
-                    \Illuminate\Support\Facades\Log::warning('Hetzner destroy on Server delete failed', [
+                    Log::warning('Pro-rata refund on Server delete failed', [
                         'server_id' => $server->id,
-                        'hetzner_id' => $managed->provider_resource_id,
+                        'managed_id' => $managed->id,
                         'error' => $e->getMessage(),
                     ]);
                 }
+
+                if ($managed->provider_resource_id) {
+                    try {
+                        $token = NolbaseSetting::read('nolbase_hetzner_api_token')
+                            ?: env('NOLBASE_HETZNER_API_TOKEN');
+                        if ($token) {
+                            (new HetznerService($token))
+                                ->deleteServer((int) $managed->provider_resource_id);
+                        }
+                    } catch (\Throwable $e) {
+                        Log::warning('Hetzner destroy on Server delete failed', [
+                            'server_id' => $server->id,
+                            'hetzner_id' => $managed->provider_resource_id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+
                 $managed->update([
-                    'billing_status' => \App\Models\NolbaseManagedServer::BILLING_DECOMMISSIONED,
+                    'billing_status' => NolbaseManagedServer::BILLING_DECOMMISSIONED,
                     'decommissioned_at' => now(),
                 ]);
             }

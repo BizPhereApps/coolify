@@ -38,6 +38,7 @@ class NolbaseManagedServer extends Model
         'billing_status',
         'suspended_at',
         'decommissioned_at',
+        'past_due_since',
     ];
 
     protected function casts(): array
@@ -48,6 +49,7 @@ class NolbaseManagedServer extends Model
             'markup_pct' => 'integer',
             'suspended_at' => 'datetime',
             'decommissioned_at' => 'datetime',
+            'past_due_since' => 'datetime',
         ];
     }
 
@@ -65,6 +67,17 @@ class NolbaseManagedServer extends Model
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('billing_status', self::BILLING_ACTIVE)
+            ->whereNull('decommissioned_at');
+    }
+
+    /**
+     * Billing-eligible: active OR past_due (a retry that succeeds clears
+     * past_due back to active). Excludes suspended (manual restore required)
+     * and decommissioned (row is dead).
+     */
+    public function scopeBillable(Builder $query): Builder
+    {
+        return $query->whereIn('billing_status', [self::BILLING_ACTIVE, self::BILLING_PAST_DUE])
             ->whereNull('decommissioned_at');
     }
 

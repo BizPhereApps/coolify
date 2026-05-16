@@ -3,6 +3,7 @@
 namespace App\Console;
 
 use App\Jobs\ApiTokenExpirationWarningJob;
+use App\Jobs\BillManagedServersJob;
 use App\Jobs\CheckForUpdatesJob;
 use App\Jobs\CheckHelperImageJob;
 use App\Jobs\CheckTraefikVersionJob;
@@ -12,8 +13,11 @@ use App\Jobs\EndExpiredTrialsJob;
 use App\Jobs\PullChangelog;
 use App\Jobs\PullTemplatesFromCDN;
 use App\Jobs\RegenerateSslCertJob;
+use App\Jobs\RunPayoutBatchJob;
 use App\Jobs\ScheduledJobManager;
+use App\Jobs\SendTrialEndingSoonRemindersJob;
 use App\Jobs\ServerManagerJob;
+use App\Jobs\SuspendPastDueManagedServersJob;
 use App\Jobs\UpdateCoolifyJob;
 use App\Models\InstanceSettings;
 use Illuminate\Console\Scheduling\Schedule;
@@ -52,21 +56,28 @@ class Kernel extends ConsoleKernel
 
             // Trial-ends-soon reminders: daily at 09:00 UTC. The job's own
             // 2-3 day window ensures each subscription is notified once.
-            $this->scheduleInstance->job(new \App\Jobs\SendTrialEndingSoonRemindersJob)
+            $this->scheduleInstance->job(new SendTrialEndingSoonRemindersJob)
                 ->dailyAt('09:00')->onOneServer();
 
             // Marketplace payouts: every Monday 09:00 Africa/Lagos sweep all
             // Developers with verified payout accounts and a pending balance
             // >= ₦5,000, send them a Paystack Transfer for the total.
-            $this->scheduleInstance->job(new \App\Jobs\RunPayoutBatchJob)
-                ->weeklyOn(\Illuminate\Console\Scheduling\Schedule::MONDAY, '09:00')
+            $this->scheduleInstance->job(new RunPayoutBatchJob)
+                ->weeklyOn(Schedule::MONDAY, '09:00')
                 ->timezone('Africa/Lagos')
                 ->onOneServer();
 
             // Nolbase-managed monthly billing: 1st of every month at 02:00 UTC.
             // Idempotent via unique (team_id, billing_month).
-            $this->scheduleInstance->job(new \App\Jobs\BillManagedServersJob)
+            $this->scheduleInstance->job(new BillManagedServersJob)
                 ->monthlyOn(1, '02:00')
+                ->onOneServer();
+
+            // Daily sweep of past_due managed servers — flips to suspended +
+            // powers off the Hetzner droplet after the configured grace
+            // window (default 7 days). Idempotent.
+            $this->scheduleInstance->job(new SuspendPastDueManagedServersJob)
+                ->dailyAt('03:00')
                 ->onOneServer();
         }
 

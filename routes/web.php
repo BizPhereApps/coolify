@@ -1,14 +1,23 @@
 <?php
 
+use App\Actions\Paystack\VerifyClientTransaction;
+use App\Actions\Paystack\VerifyTransaction;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\OauthController;
 use App\Http\Controllers\UploadController;
 use App\Livewire\Admin\Index as AdminIndex;
 use App\Livewire\Boarding\Index as BoardingIndex;
+use App\Livewire\Client\Application\Create;
+use App\Livewire\Client\Application\Show;
 use App\Livewire\Dashboard;
 use App\Livewire\Destination\Index as DestinationIndex;
 use App\Livewire\Destination\Show as DestinationShow;
 use App\Livewire\ForcePasswordReset;
+use App\Livewire\Marketplace\AcceptInvitation;
+use App\Livewire\Nolbase\Admin\AuditLog;
+use App\Livewire\Nolbase\Admin\Login;
+use App\Livewire\Nolbase\Admin\ManagedFleet;
+use App\Livewire\Nolbase\Admin\Settings;
 use App\Livewire\Notifications\Discord as NotificationDiscord;
 use App\Livewire\Notifications\Email as NotificationEmail;
 use App\Livewire\Notifications\Pushover as NotificationPushover;
@@ -33,8 +42,11 @@ use App\Livewire\Project\Service\DatabaseBackups as ServiceDatabaseBackups;
 use App\Livewire\Project\Service\Index as ServiceIndex;
 use App\Livewire\Project\Shared\ExecuteContainerCommand;
 use App\Livewire\Project\Shared\Logs;
-use App\Livewire\Project\Shared\ScheduledTask\Show as ScheduledTaskShow;
 use App\Livewire\Project\Show as ProjectShow;
+use App\Livewire\Reseller\Index;
+use App\Livewire\Reseller\InvitationForm;
+use App\Livewire\Reseller\OfferForm;
+use App\Livewire\Reseller\Payouts\AccountForm;
 use App\Livewire\Security\ApiTokens;
 use App\Livewire\Security\CloudInitScripts;
 use App\Livewire\Security\CloudTokens;
@@ -88,6 +100,8 @@ use App\Livewire\Terminal\Index as TerminalIndex;
 use App\Models\ScheduledDatabaseBackupExecution;
 use App\Models\ServiceDatabase;
 use App\Providers\RouteServiceProvider;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -114,30 +128,30 @@ Route::view('/pricing', 'marketing.pricing')->name('marketing.pricing');
 // for client payments. Both must remain unauthenticated until the Client
 // completes the Paystack flow; VerifyClientTransaction creates the User
 // + SubTeam + Project + ClientSubscription on success and auto-logs them in.
-Route::get('/invitations/{token}', \App\Livewire\Marketplace\AcceptInvitation::class)->name('marketplace.invitation.accept');
-Route::get('/payments/paystack/marketplace-callback', function (\Illuminate\Http\Request $request) {
+Route::get('/invitations/{token}', AcceptInvitation::class)->name('marketplace.invitation.accept');
+Route::get('/payments/paystack/marketplace-callback', function (Request $request) {
     $reference = (string) $request->query('reference', '');
     if (! $reference) {
         return redirect('/')->withErrors(['paystack' => 'Missing reference.']);
     }
     try {
-        $sub = \App\Actions\Paystack\VerifyClientTransaction::run($reference);
+        $sub = VerifyClientTransaction::run($reference);
         $clientUser = $sub->subTeam->clientUser;
         if ($clientUser) {
             auth()->login($clientUser);
         }
 
         return redirect('/client')->with('success', 'Welcome! Your hosting is set up.');
-    } catch (\Throwable $e) {
+    } catch (Throwable $e) {
         return redirect('/')->withErrors(['paystack' => $e->getMessage()]);
     }
 })->name('marketplace.callback');
 
 // Nolbase super-admin (separate guard, distinct from tenant auth)
 Route::prefix('nolbase/admin')->name('nolbase.admin.')->group(function () {
-    Route::get('/login', \App\Livewire\Nolbase\Admin\Login::class)->name('login');
+    Route::get('/login', Login::class)->name('login');
     Route::post('/logout', function () {
-        \Illuminate\Support\Facades\Auth::guard('nolbase')->logout();
+        Auth::guard('nolbase')->logout();
         request()->session()->invalidate();
         request()->session()->regenerateToken();
 
@@ -145,12 +159,13 @@ Route::prefix('nolbase/admin')->name('nolbase.admin.')->group(function () {
     })->name('logout');
 
     Route::middleware('nolbase.admin')->group(function () {
-        Route::get('/', \App\Livewire\Nolbase\Admin\Dashboard::class)->name('dashboard');
-        Route::get('/tenants', \App\Livewire\Nolbase\Admin\Tenants\Index::class)->name('tenants.index');
-        Route::get('/tenants/{team}', \App\Livewire\Nolbase\Admin\Tenants\Show::class)->name('tenants.show');
-        Route::get('/audit', \App\Livewire\Nolbase\Admin\AuditLog::class)->name('audit');
+        Route::get('/', App\Livewire\Nolbase\Admin\Dashboard::class)->name('dashboard');
+        Route::get('/tenants', App\Livewire\Nolbase\Admin\Tenants\Index::class)->name('tenants.index');
+        Route::get('/tenants/{team}', App\Livewire\Nolbase\Admin\Tenants\Show::class)->name('tenants.show');
+        Route::get('/audit', AuditLog::class)->name('audit');
+        Route::get('/managed-fleet', ManagedFleet::class)->name('managed-fleet');
         Route::middleware('nolbase.admin:staff')->group(function () {
-            Route::get('/settings', \App\Livewire\Nolbase\Admin\Settings::class)->name('settings');
+            Route::get('/settings', Settings::class)->name('settings');
         });
     });
 });
@@ -160,9 +175,9 @@ Route::prefix('nolbase/admin')->name('nolbase.admin.')->group(function () {
 // subscription redirect (they don't subscribe to Nolbase themselves; they
 // pay their Developer through the marketplace).
 Route::middleware(['auth'])->prefix('client')->name('client.')->group(function () {
-    Route::get('/', \App\Livewire\Client\Dashboard::class)->name('dashboard');
-    Route::get('/applications/new', \App\Livewire\Client\Application\Create::class)->name('application.create');
-    Route::get('/applications/{applicationUuid}', \App\Livewire\Client\Application\Show::class)->name('application.show');
+    Route::get('/', App\Livewire\Client\Dashboard::class)->name('dashboard');
+    Route::get('/applications/new', Create::class)->name('application.create');
+    Route::get('/applications/{applicationUuid}', Show::class)->name('application.show');
 });
 
 Route::middleware(['auth', 'verified', 'scope.client'])->group(function () {
@@ -179,27 +194,27 @@ Route::middleware(['auth', 'verified', 'scope.client'])->group(function () {
 
     // Reseller / marketplace (Phase 6) — gated to plans with the 'reseller' feature
     Route::middleware('reseller')->prefix('reseller')->name('reseller.')->group(function () {
-        Route::get('/', \App\Livewire\Reseller\Index::class)->name('index');
-        Route::get('/offers/new', \App\Livewire\Reseller\OfferForm::class)->name('offers.create');
-        Route::get('/offers/{offer}/edit', \App\Livewire\Reseller\OfferForm::class)->name('offers.edit');
-        Route::get('/invitations/new', \App\Livewire\Reseller\InvitationForm::class)->name('invitations.create');
+        Route::get('/', Index::class)->name('index');
+        Route::get('/offers/new', OfferForm::class)->name('offers.create');
+        Route::get('/offers/{offer}/edit', OfferForm::class)->name('offers.edit');
+        Route::get('/invitations/new', InvitationForm::class)->name('invitations.create');
 
         Route::prefix('payouts')->name('payouts.')->group(function () {
-            Route::get('/', \App\Livewire\Reseller\Payouts\Index::class)->name('index');
-            Route::get('/edit', \App\Livewire\Reseller\Payouts\AccountForm::class)->name('edit');
+            Route::get('/', App\Livewire\Reseller\Payouts\Index::class)->name('index');
+            Route::get('/edit', AccountForm::class)->name('edit');
         });
     });
 
-    Route::get('/payments/paystack/callback', function (\Illuminate\Http\Request $request) {
+    Route::get('/payments/paystack/callback', function (Request $request) {
         $reference = (string) $request->query('reference', '');
         if (! $reference) {
             return redirect()->route('subscription.show')->withErrors(['paystack' => 'Missing reference.']);
         }
         try {
-            \App\Actions\Paystack\VerifyTransaction::run($reference);
+            VerifyTransaction::run($reference);
 
             return redirect()->route('subscription.show')->with('success', 'Subscription activated.');
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return redirect()->route('subscription.show')->withErrors(['paystack' => $e->getMessage()]);
         }
     })->name('payments.paystack.callback');

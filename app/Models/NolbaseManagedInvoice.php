@@ -25,6 +25,8 @@ class NolbaseManagedInvoice extends Model
         'status',
         'failure_reason',
         'billed_at',
+        'refunded_ngn',
+        'refunded_at',
     ];
 
     protected function casts(): array
@@ -34,6 +36,8 @@ class NolbaseManagedInvoice extends Model
             'line_items' => 'array',
             'total_ngn' => 'integer',
             'billed_at' => 'datetime',
+            'refunded_ngn' => 'integer',
+            'refunded_at' => 'datetime',
         ];
     }
 

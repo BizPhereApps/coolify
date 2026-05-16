@@ -8,6 +8,7 @@
         </div>
         <nav class="flex gap-3 text-sm">
             <a href="{{ route('nolbase.admin.tenants.index') }}" class="hover:text-coollabs">Tenants</a>
+            <a href="{{ route('nolbase.admin.managed-fleet') }}" class="hover:text-coollabs">Managed fleet</a>
             <a href="{{ route('nolbase.admin.audit') }}" class="hover:text-coollabs">Audit log</a>
             @if (auth('nolbase')->user()->isStaff() || auth('nolbase')->user()->isSuperadmin())
                 <a href="{{ route('nolbase.admin.settings') }}" class="hover:text-coollabs">Settings</a>

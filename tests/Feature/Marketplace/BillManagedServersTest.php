@@ -13,6 +13,7 @@ use Database\Seeders\PlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 
 uses(RefreshDatabase::class);
 
@@ -120,7 +121,8 @@ test('tenant with multiple managed servers pays the sum', function () {
     Http::assertSent(fn ($r) => $r['amount'] === 3_825_000); // ₦38,250 in kobo
 });
 
-test('past-due: when Paystack reports failure, managed servers go past_due', function () {
+test('past-due: when Paystack reports failure, managed servers go past_due and notify the team', function () {
+    Mail::fake();
     [$team, $server] = teamWithManagedServer();
     fakePaystackChargeFailed();
 
@@ -134,7 +136,25 @@ test('past-due: when Paystack reports failure, managed servers go past_due', fun
         ->and($invoice->failure_reason)->toContain('Insufficient funds');
 
     $managed = NolbaseManagedServer::where('server_id', $server->id)->first();
-    expect($managed->billing_status)->toBe(NolbaseManagedServer::BILLING_PAST_DUE);
+    expect($managed->billing_status)->toBe(NolbaseManagedServer::BILLING_PAST_DUE)
+        ->and($managed->past_due_since)->not->toBeNull();
+});
+
+test('successful recharge clears past_due_since and flips status back to active', function () {
+    [$team, $server] = teamWithManagedServer();
+    // Simulate a previously past-due server that the team is now retrying to
+    // pay (e.g. they updated their card and operator triggered a re-run).
+    NolbaseManagedServer::where('server_id', $server->id)->update([
+        'billing_status' => NolbaseManagedServer::BILLING_PAST_DUE,
+        'past_due_since' => now()->subDays(3),
+    ]);
+    fakePaystackChargeOk();
+
+    BillManagedServers::run();
+
+    $managed = NolbaseManagedServer::where('server_id', $server->id)->first();
+    expect($managed->billing_status)->toBe(NolbaseManagedServer::BILLING_ACTIVE)
+        ->and($managed->past_due_since)->toBeNull();
 });
 
 test('idempotent: re-running in the same month does not double-charge', function () {

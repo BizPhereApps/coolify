@@ -8,7 +8,9 @@ use App\Models\Team;
 use App\Services\PaystackService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Lorisleiva\Actions\Concerns\AsAction;
+use Symfony\Component\Mime\Email;
 
 class BillManagedServers
 {
@@ -31,7 +33,7 @@ class BillManagedServers
         $forMonth = ($forMonth ?? now())->copy()->startOfMonth();
 
         $teamIds = NolbaseManagedServer::query()
-            ->active()
+            ->billable()
             ->pluck('server_id');
         $teams = Team::query()
             ->whereHas('servers', fn ($q) => $q->whereIn('id', $teamIds))
@@ -45,11 +47,12 @@ class BillManagedServers
         $paystack = null;
 
         foreach ($teams as $team) {
-            $servers = NolbaseManagedServer::active()
+            $servers = NolbaseManagedServer::billable()
                 ->whereIn('server_id', $team->servers()->pluck('id'))
                 ->get();
             if ($servers->isEmpty()) {
                 $skipped++;
+
                 continue;
             }
 
@@ -60,6 +63,7 @@ class BillManagedServers
                 ->first();
             if ($existing && $existing->isPaid()) {
                 $skipped++;
+
                 continue;
             }
 
@@ -79,15 +83,13 @@ class BillManagedServers
             if (! $authCode || ! $billingEmail) {
                 // Tenant hasn't completed Paystack-on-file setup yet. Record
                 // the invoice as pending; super-admin can chase manually.
-                NolbaseManagedInvoice::updateOrCreate(
-                    ['team_id' => $team->id, 'billing_month' => $forMonth->toDateString()],
-                    [
-                        'total_ngn' => $total, 'line_items' => $lineItems,
-                        'status' => NolbaseManagedInvoice::STATUS_PENDING,
-                        'failure_reason' => 'No paystack_authorization_code on subscription — tenant has no card on file.',
-                    ],
-                );
+                $this->upsertInvoice($team->id, $forMonth, [
+                    'total_ngn' => $total, 'line_items' => $lineItems,
+                    'status' => NolbaseManagedInvoice::STATUS_PENDING,
+                    'failure_reason' => 'No paystack_authorization_code on subscription — tenant has no card on file.',
+                ]);
                 $skipped++;
+
                 continue;
             }
 
@@ -110,46 +112,112 @@ class BillManagedServers
                 $paystackStatus = data_get($response, 'status');
                 $isSuccess = $paystackStatus === 'success';
 
-                NolbaseManagedInvoice::updateOrCreate(
-                    ['team_id' => $team->id, 'billing_month' => $forMonth->toDateString()],
-                    [
-                        'total_ngn' => $total, 'line_items' => $lineItems,
-                        'paystack_reference' => $reference,
-                        'status' => $isSuccess ? NolbaseManagedInvoice::STATUS_SUCCESS : NolbaseManagedInvoice::STATUS_FAILED,
-                        'failure_reason' => $isSuccess ? null : data_get($response, 'gateway_response', 'Charge declined.'),
-                        'billed_at' => $isSuccess ? now() : null,
-                    ],
-                );
+                $this->upsertInvoice($team->id, $forMonth, [
+                    'total_ngn' => $total, 'line_items' => $lineItems,
+                    'paystack_reference' => $reference,
+                    'status' => $isSuccess ? NolbaseManagedInvoice::STATUS_SUCCESS : NolbaseManagedInvoice::STATUS_FAILED,
+                    'failure_reason' => $isSuccess ? null : data_get($response, 'gateway_response', 'Charge declined.'),
+                    'billed_at' => $isSuccess ? now() : null,
+                ]);
 
                 if ($isSuccess) {
                     $billed++;
                     $totalNgn += $total;
-                } else {
-                    $failed++;
-                    // Mark all of this team's managed servers past_due. A
-                    // separate decommission grace job (Phase 7.3) can then
-                    // suspend after N days.
+                    // Clear any prior past_due_since stamps now that the team
+                    // is current again. Status stays whatever it is (active
+                    // for those that hadn't tripped; suspended servers must be
+                    // resurrected manually by an admin since the Hetzner
+                    // droplet was powered off).
                     NolbaseManagedServer::query()
                         ->whereIn('id', $servers->pluck('id'))
-                        ->update(['billing_status' => NolbaseManagedServer::BILLING_PAST_DUE]);
+                        ->where('billing_status', NolbaseManagedServer::BILLING_PAST_DUE)
+                        ->update([
+                            'billing_status' => NolbaseManagedServer::BILLING_ACTIVE,
+                            'past_due_since' => null,
+                        ]);
+                } else {
+                    $failed++;
+                    // Mark all of this team's managed servers past_due and
+                    // stamp past_due_since on first transition so the
+                    // SuspendPastDueManagedServersJob grace clock starts.
+                    NolbaseManagedServer::query()
+                        ->whereIn('id', $servers->pluck('id'))
+                        ->where('billing_status', '!=', NolbaseManagedServer::BILLING_PAST_DUE)
+                        ->update([
+                            'billing_status' => NolbaseManagedServer::BILLING_PAST_DUE,
+                            'past_due_since' => now(),
+                        ]);
+
+                    $this->notifyBillingFailed($team, $billingEmail, $total, data_get($response, 'gateway_response'));
                 }
             } catch (\Throwable $e) {
                 Log::error('BillManagedServers: charge_authorization threw', [
                     'team_id' => $team->id, 'error' => $e->getMessage(),
                 ]);
-                NolbaseManagedInvoice::updateOrCreate(
-                    ['team_id' => $team->id, 'billing_month' => $forMonth->toDateString()],
-                    [
-                        'total_ngn' => $total, 'line_items' => $lineItems,
-                        'paystack_reference' => $reference,
-                        'status' => NolbaseManagedInvoice::STATUS_FAILED,
-                        'failure_reason' => $e->getMessage(),
-                    ],
-                );
+                $this->upsertInvoice($team->id, $forMonth, [
+                    'total_ngn' => $total, 'line_items' => $lineItems,
+                    'paystack_reference' => $reference,
+                    'status' => NolbaseManagedInvoice::STATUS_FAILED,
+                    'failure_reason' => $e->getMessage(),
+                ]);
+                NolbaseManagedServer::query()
+                    ->whereIn('id', $servers->pluck('id'))
+                    ->where('billing_status', '!=', NolbaseManagedServer::BILLING_PAST_DUE)
+                    ->update([
+                        'billing_status' => NolbaseManagedServer::BILLING_PAST_DUE,
+                        'past_due_since' => now(),
+                    ]);
+                $this->notifyBillingFailed($team, $billingEmail, $total, $e->getMessage());
                 $failed++;
             }
         }
 
         return compact('billed', 'failed', 'skipped', 'totalNgn') + ['total_ngn' => $totalNgn];
+    }
+
+    /**
+     * Equivalent of updateOrCreate keyed on (team_id, billing_month), but uses
+     * whereDate for the lookup so the stored date-with-time value matches the
+     * date-only lookup string. The plain updateOrCreate fails here because the
+     * Eloquent `date` cast persists `Y-m-d H:i:s` while the lookup string is
+     * `Y-m-d` — see Phase 7.3 fix.
+     */
+    private function upsertInvoice(int $teamId, Carbon $forMonth, array $attributes): NolbaseManagedInvoice
+    {
+        $invoice = NolbaseManagedInvoice::query()
+            ->where('team_id', $teamId)
+            ->whereDate('billing_month', $forMonth->toDateString())
+            ->first()
+            ?? new NolbaseManagedInvoice([
+                'team_id' => $teamId,
+                'billing_month' => $forMonth->copy(),
+            ]);
+        $invoice->fill($attributes + [
+            'team_id' => $teamId,
+            'billing_month' => $forMonth->copy(),
+        ])->save();
+
+        return $invoice;
+    }
+
+    private function notifyBillingFailed(Team $team, string $billingEmail, int $totalNgn, ?string $reason): void
+    {
+        try {
+            Mail::send(
+                'emails.managed-billing-failed',
+                [
+                    'teamName' => $team->name,
+                    'totalNgn' => $totalNgn,
+                    'reason' => $reason ?: 'Charge declined.',
+                    'subscriptionUrl' => url('/subscription'),
+                ],
+                fn (Email $m) => $m->to($billingEmail)
+                    ->subject('Action required: your Nolbase monthly hosting bill failed'),
+            );
+        } catch (\Throwable $e) {
+            Log::warning('managed-billing-failed email send failed', [
+                'team_id' => $team->id, 'error' => $e->getMessage(),
+            ]);
+        }
     }
 }
