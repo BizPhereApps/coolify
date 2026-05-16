@@ -7,10 +7,10 @@
                 <a href="/" class="text-xl font-bold tracking-tight">{{ config('nolbase.brand_name') }}</a>
                 <nav class="flex items-center gap-4 text-sm">
                     @auth
-                        <a href="{{ route('dashboard') }}" class="hover:text-coollabs">Dashboard</a>
+                        <a href="{{ nolbase_app_url('/dashboard') }}" class="hover:text-coollabs">Dashboard</a>
                     @else
-                        <a href="{{ route('login') }}" class="hover:text-coollabs">Sign in</a>
-                        <a href="/register" class="rounded-md bg-coollabs px-3 py-1.5 text-white hover:bg-coollabs-200">Start free trial</a>
+                        <a href="{{ nolbase_app_url('/login') }}" class="hover:text-coollabs">Sign in</a>
+                        <a href="{{ nolbase_app_url('/register') }}" class="rounded-md bg-coollabs px-3 py-1.5 text-white hover:bg-coollabs-200">Start free trial</a>
                     @endauth
                 </nav>
             </div>

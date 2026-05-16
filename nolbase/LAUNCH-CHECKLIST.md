@@ -15,10 +15,11 @@ hand-waving. Skip nothing in §1 and §8.
 
 | Block | State | Owner |
 |---|---|---|
-| §1.1 Domain `nolbase.io` + `app.nolbase.io` DNS + TLS | **DONE** | — |
+| §1.1 `app.nolbase.io` DNS + TLS | **DONE** | — |
+| §1.1 Apex `nolbase.io` DNS + TLS (same server, marketing host) | TODO | you |
 | §1.2 Production server | DONE | — |
 | §1.3 Source repo `BizPhereApps/coolify` public | needs confirmation | you |
-| §1.4 Legal pages live on marketing site | TODO | you |
+| §1.4 Legal pages: routes registered with DRAFT placeholders | partial | you (replace draft text with lawyer-reviewed content) |
 | §2.1 Paystack business verification + Transfers approved | **DONE** | — |
 | §2.2 Create 4 plan codes in Paystack + map onto plans table | TODO | you (see new artisan command below) |
 | §2.3 Webhook endpoint registered in Paystack dashboard | TODO | you |
@@ -74,15 +75,16 @@ superadmin exists, marketplace fee % is sane.
 
 ### 1.1 Domain & DNS
 
-- [ ] Buy `nolbase.io` (or the chosen production domain) if not already owned.
+- [x] Buy `nolbase.io`.
 - [ ] Decide subdomain split:
-  - `nolbase.io` — marketing site (out of scope here)
-  - `app.nolbase.io` — the actual Nolbase control plane (this codebase)
+  - `nolbase.io` — **marketing site, served by this Laravel app** at the apex. Routes: `/`, `/pricing`, `/legal/*`. Implemented via the `EnforceHostRouting` middleware.
+  - `app.nolbase.io` — tenant SaaS app. Routes: `/login`, `/register`, `/dashboard`, everything authenticated.
   - `webhooks.nolbase.io` (optional) — Paystack webhook target, separated so you can rate-limit / firewall it independently
   - `mail.nolbase.io` — ZeptoMail sending subdomain (better for deliverability than the apex)
-- [ ] A-record `app.nolbase.io` → production server IP.
+- [x] A-record `app.nolbase.io` → production server IP.
+- [ ] A-record `nolbase.io` (apex) → **same** production server IP. (One Laravel deploy serves both hosts via host-based routing.)
 - [ ] AAAA-record if IPv6 is in scope (Hetzner gives you v6 free).
-- [ ] Let's Encrypt cert via Traefik (Coolify handles this automatically once the domain resolves to the server).
+- [ ] Let's Encrypt cert for **both** `nolbase.io` and `app.nolbase.io` (Traefik handles automatically once both DNS records resolve to the server). Include `nolbase.io` in your Traefik labels alongside `app.nolbase.io`.
 
 ### 1.2 Server
 
@@ -97,9 +99,9 @@ superadmin exists, marketplace fee % is sane.
 
 ### 1.4 Legal pages
 
-- [ ] Privacy policy at `nolbase.io/legal/privacy` (or wherever your marketing site lives).
-- [ ] Terms of Service at `nolbase.io/legal/terms`.
-- [ ] These are linked from `<x-agpl-footer />`. Both should pre-date taking real money.
+- [x] Privacy policy route registered at `nolbase.io/legal/privacy` with DRAFT placeholder content.
+- [x] Terms of Service route at `nolbase.io/legal/terms` with DRAFT placeholder content.
+- [ ] **Replace the placeholder content** with real text reviewed by a Nigerian lawyer before taking real money. Both pages currently render a yellow `DRAFT — not legally binding` banner.
 - [ ] Make sure the ToS covers: marketplace mediator role, fee structure, refund policy, Developer-leaves-Nolbase scenario, suspension grounds, dispute resolution forum, governing law (Nigeria).
 
 ---
@@ -254,7 +256,20 @@ SOKETI_HOST=0.0.0.0
 # ── Nolbase brand + AGPL ────────────────────────────────────────────
 NOLBASE_BRAND_NAME=Nolbase
 NOLBASE_SUPPORT_EMAIL=support@nolbase.io
-NOLBASE_SOURCE_REPO_URL=https://github.com/BizPhereApps/nolbase
+NOLBASE_SOURCE_REPO_URL=https://github.com/BizPhereApps/coolify
+
+# ── Two-host split: marketing site vs app ───────────────────────────
+# When set, the EnforceHostRouting middleware redirects cross-host
+# requests to the correct host. Leave both empty in dev to run on a
+# single host.
+NOLBASE_MARKETING_HOST=nolbase.io
+NOLBASE_APP_HOST=app.nolbase.io
+NOLBASE_MARKETING_URL=https://nolbase.io
+
+# Cross-subdomain session cookie — required so a user logged in on
+# app.nolbase.io still appears auth'd to the marketing site (used by
+# the "Dashboard" link in marketing-page nav). LEADING DOT REQUIRED.
+SESSION_DOMAIN=.nolbase.io
 
 # ── Optional: Sentry / error tracking ───────────────────────────────
 # SENTRY_LARAVEL_DSN=

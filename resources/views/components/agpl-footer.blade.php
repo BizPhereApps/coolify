@@ -8,8 +8,8 @@
         </div>
         <div class="flex items-center gap-4">
             <a href="{{ route('legal.source') }}" class="hover:text-coollabs">Source code</a>
-            <a href="{{ rtrim(config('nolbase.marketing_url'), '/') }}/legal/privacy" class="hover:text-coollabs">Privacy</a>
-            <a href="{{ rtrim(config('nolbase.marketing_url'), '/') }}/legal/terms" class="hover:text-coollabs">Terms</a>
+            <a href="{{ nolbase_marketing_url('/legal/privacy') }}" class="hover:text-coollabs">Privacy</a>
+            <a href="{{ nolbase_marketing_url('/legal/terms') }}" class="hover:text-coollabs">Terms</a>
         </div>
     </div>
 </footer>

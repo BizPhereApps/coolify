@@ -118,11 +118,31 @@ Route::get('/auth/{provider}/redirect', [OauthController::class, 'redirect'])->n
 Route::get('/auth/{provider}/callback', [OauthController::class, 'callback'])->name('auth.callback');
 
 Route::view('/legal/source', 'legal.source')->name('legal.source');
+Route::view('/legal/privacy', 'legal.privacy')->name('legal.privacy');
+Route::view('/legal/terms', 'legal.terms')->name('legal.terms');
 
 // Public marketing pricing page. The same Subscription\PricingPlans Livewire
 // renders here too; choose() already redirects to /login when no team is in
 // session, so the unauth visitor flow naturally funnels into signup.
 Route::view('/pricing', 'marketing.pricing')->name('marketing.pricing');
+
+// Public landing dispatcher: on the marketing host (nolbase.io) this serves
+// the public homepage; on the app host (app.nolbase.io) it sends visitors
+// through the auth gate (dashboard for logged-in, login for everyone else).
+// In single-host dev mode (no marketing_host configured) it falls through
+// to the auth gate so the existing dev experience is unchanged.
+Route::get('/', function () {
+    $host = strtolower(request()->getHost());
+    $marketingHost = strtolower((string) config('nolbase.marketing_host'));
+
+    if ($marketingHost && $host === $marketingHost) {
+        return view('marketing.home');
+    }
+
+    return Auth::check()
+        ? redirect()->route('dashboard')
+        : redirect()->route('login');
+})->name('home');
 
 // Marketplace (Phase 6) — public invitation accept page + Paystack callback
 // for client payments. Both must remain unauthenticated until the Client
@@ -185,7 +205,7 @@ Route::middleware(['auth', 'verified', 'scope.client'])->group(function () {
         Route::get('/force-password-reset', ForcePasswordReset::class)->name('auth.force-password-reset');
     });
 
-    Route::get('/', Dashboard::class)->name('dashboard');
+    Route::get('/dashboard', Dashboard::class)->name('dashboard');
     Route::get('/admin', AdminIndex::class)->name('admin.index');
     Route::get('/onboarding', BoardingIndex::class)->name('onboarding');
 
