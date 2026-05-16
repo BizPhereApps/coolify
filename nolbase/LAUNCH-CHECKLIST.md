@@ -24,6 +24,27 @@ hand-waving. Skip nothing in §1 and §8.
 8.  Document day-1, week-1, month-1 ops cadence          (§10)
 ```
 
+### Automated verification
+
+The repository ships a preflight command that automates every check in
+§4 (env vars), §5 (smoke), §6 (AGPL), and the parts of §7 that don't
+need a real customer interaction:
+
+```bash
+docker exec coolify php artisan nolbase:preflight              # human output
+docker exec coolify php artisan nolbase:preflight --strict     # treat warnings as failures
+docker exec coolify php artisan nolbase:preflight --json       # machine-readable
+```
+
+Run it after each deploy. **Exit code 0 = green, non-zero = blockers.**
+The command checks 15 distinct items including: APP_ENV/APP_DEBUG, DB
+connectivity, multi-tenant mode, Telescope disabled, AGPL source URL
+non-placeholder, /legal/source route registered, Paystack secrets
+present + LIVE in production, webhook route registered, mail from
+address non-placeholder, mailer not 'log' in production, all 3 plans
+seeded, Pro/Business plans have Paystack codes, at least one
+superadmin exists, marketplace fee % is sane.
+
 ---
 
 ## §1. Pre-flight one-time setup
@@ -224,10 +245,8 @@ NOLBASE_SOURCE_REPO_URL=https://github.com/BizPhereApps/nolbase
 **Verify before deploy:**
 ```bash
 docker exec coolify php artisan config:cache
-docker exec coolify php artisan config:show subscription
-docker exec coolify php artisan config:show mail
-docker exec coolify php artisan tinker --execute 'echo "isCloud: " . (isCloud() ? "true" : "false") . PHP_EOL;'
-# Must print: isCloud: true
+docker exec coolify php artisan nolbase:preflight --strict
+# Exit 0 = green. Any non-zero = fix before going live.
 ```
 
 ---
