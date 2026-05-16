@@ -2,7 +2,7 @@
     @if (! $available)
         <div class="rounded-md border border-coolgray-200 bg-coolgray-100 p-4 text-sm text-neutral-500">
             <p class="font-semibold">Nolbase-managed hosting is not yet enabled.</p>
-            <p class="mt-1">Contact support@nolbase.com or wait for general availability. In the meantime, you can attach your own server via Hetzner / DigitalOcean / Vultr above.</p>
+            <p class="mt-1">Contact {{ config('nolbase.support_email') }} or wait for general availability. In the meantime, you can attach your own server via Hetzner / DigitalOcean / Vultr above.</p>
         </div>
     @else
         @if ($limit_reached)

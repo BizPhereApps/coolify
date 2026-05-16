@@ -1,13 +1,36 @@
 # Nolbase Launch Checklist
 
-**Status:** Draft v1
+**Status:** Draft v2
 **Owner:** putup9ja@gmail.com
-**Last updated:** 2026-05-15
+**Last updated:** 2026-05-16
 
 This document is what you work through to take the current `nolbase-phase-1`
 branch from green tests to a real customer paying real Naira. It's
 opinionated — every line is something I'd actually do, not generic
 hand-waving. Skip nothing in §1 and §8.
+
+---
+
+## Current launch status (2026-05-16)
+
+| Block | State | Owner |
+|---|---|---|
+| §1.1 Domain `nolbase.io` + `app.nolbase.io` DNS + TLS | **DONE** | — |
+| §1.2 Production server | DONE | — |
+| §1.3 Source repo `BizPhereApps/coolify` public | needs confirmation | you |
+| §1.4 Legal pages live on marketing site | TODO | you |
+| §2.1 Paystack business verification + Transfers approved | **DONE** | — |
+| §2.2 Create 4 plan codes in Paystack + map onto plans table | TODO | you (see new artisan command below) |
+| §2.3 Webhook endpoint registered in Paystack dashboard | TODO | you |
+| §3 ZeptoMail: domain verified + SPF/DKIM/DMARC live | **DONE** | — |
+| §5 Production `.env` filled in | TODO | you |
+| §7 Drills A-G with real test cards | TODO | you |
+| §8 Nigerian fintech lawyer conversation | **TODO ← only true blocker** | you + lawyer |
+| §9 Backups, monitoring, alerting wiring | partial (code-side done; uptime monitor TODO) | you |
+
+In other words: the engineering is done, plus operational §1, §2.1, §3.
+What's left is creating the 4 plan codes, filling `.env`, the lawyer
+conversation, and the deploy + drills.
 
 ---
 
@@ -51,13 +74,13 @@ superadmin exists, marketplace fee % is sane.
 
 ### 1.1 Domain & DNS
 
-- [ ] Buy `nolbase.com` (or the chosen production domain) if not already owned.
+- [ ] Buy `nolbase.io` (or the chosen production domain) if not already owned.
 - [ ] Decide subdomain split:
-  - `nolbase.com` — marketing site (out of scope here)
-  - `app.nolbase.com` — the actual Nolbase control plane (this codebase)
-  - `webhooks.nolbase.com` (optional) — Paystack webhook target, separated so you can rate-limit / firewall it independently
-  - `mail.nolbase.com` — ZeptoMail sending subdomain (better for deliverability than the apex)
-- [ ] A-record `app.nolbase.com` → production server IP.
+  - `nolbase.io` — marketing site (out of scope here)
+  - `app.nolbase.io` — the actual Nolbase control plane (this codebase)
+  - `webhooks.nolbase.io` (optional) — Paystack webhook target, separated so you can rate-limit / firewall it independently
+  - `mail.nolbase.io` — ZeptoMail sending subdomain (better for deliverability than the apex)
+- [ ] A-record `app.nolbase.io` → production server IP.
 - [ ] AAAA-record if IPv6 is in scope (Hetzner gives you v6 free).
 - [ ] Let's Encrypt cert via Traefik (Coolify handles this automatically once the domain resolves to the server).
 
@@ -74,8 +97,8 @@ superadmin exists, marketplace fee % is sane.
 
 ### 1.4 Legal pages
 
-- [ ] Privacy policy at `nolbase.com/legal/privacy` (or wherever your marketing site lives).
-- [ ] Terms of Service at `nolbase.com/legal/terms`.
+- [ ] Privacy policy at `nolbase.io/legal/privacy` (or wherever your marketing site lives).
+- [ ] Terms of Service at `nolbase.io/legal/terms`.
 - [ ] These are linked from `<x-agpl-footer />`. Both should pre-date taking real money.
 - [ ] Make sure the ToS covers: marketplace mediator role, fee structure, refund policy, Developer-leaves-Nolbase scenario, suspension grounds, dispute resolution forum, governing law (Nigeria).
 
@@ -99,24 +122,20 @@ You can create these via Paystack dashboard OR via API. The plan codes go in
 - [ ] Create **Pro Annual**: ₦150,000 / year, NGN, plan code → save.
 - [ ] Create **Business Monthly**: ₦50,000 / month → save.
 - [ ] Create **Business Annual**: ₦500,000 / year → save.
-- [ ] Update the seeded `plans` rows with the real Paystack codes:
+- [ ] Map them onto the local `plans` table using the dedicated command (validates the `PLN_` prefix, idempotent re-runs):
   ```bash
-  docker exec coolify php artisan tinker --execute '
-    App\Models\Plan::pro()->update([
-      "paystack_plan_code_monthly" => "PLN_xxx",
-      "paystack_plan_code_annual"  => "PLN_yyy",
-    ]);
-    App\Models\Plan::business()->update([
-      "paystack_plan_code_monthly" => "PLN_zzz",
-      "paystack_plan_code_annual"  => "PLN_www",
-    ]);
-  '
+  docker exec coolify php artisan nolbase:plans:set-paystack-codes \
+    --pro-monthly=PLN_xxx \
+    --pro-annual=PLN_yyy \
+    --business-monthly=PLN_zzz \
+    --business-annual=PLN_www
   ```
+  Run with no flags to enter the codes interactively.
 
 ### 2.3 Webhook endpoint
 
 - [ ] Paystack dashboard → Settings → API Keys & Webhooks
-- [ ] Webhook URL: `https://app.nolbase.com/webhooks/payments/paystack/events`
+- [ ] Webhook URL: `https://app.nolbase.io/webhooks/payments/paystack/events`
 - [ ] Copy the webhook secret → put in `PAYSTACK_WEBHOOK_SECRET` in production `.env`
 - [ ] **Test the webhook** before launch: Paystack dashboard → Send test webhook → verify a `paystack_events` row lands and `processed_at` becomes non-null.
 
@@ -139,14 +158,14 @@ You can create these via Paystack dashboard OR via API. The plan codes go in
 ### 3.1 Account + domain verification
 
 - [ ] Sign up at zeptomail.com (Zoho).
-- [ ] Add your sending subdomain: `mail.nolbase.com` (recommended) or `nolbase.com`.
+- [ ] Add your sending subdomain: `mail.nolbase.io` (recommended) or `nolbase.io`.
 - [ ] ZeptoMail will give you DNS records to add. Add them to your DNS provider.
 
 ### 3.2 SPF / DKIM / DMARC (non-optional for deliverability)
 
-- [ ] **SPF**: TXT record on `mail.nolbase.com` (or apex): `v=spf1 include:zeptomail.com ~all`
-- [ ] **DKIM**: ZeptoMail issues a public key TXT record at a `<selector>._domainkey.mail.nolbase.com` path. Add exactly what they give you.
-- [ ] **DMARC**: TXT on `_dmarc.nolbase.com`: `v=DMARC1; p=quarantine; rua=mailto:dmarc@nolbase.com; pct=100`. Start with `p=none` for first 2 weeks while you monitor reports, then move to `p=quarantine`, eventually `p=reject` once clean.
+- [ ] **SPF**: TXT record on `mail.nolbase.io` (or apex): `v=spf1 include:zeptomail.com ~all`
+- [ ] **DKIM**: ZeptoMail issues a public key TXT record at a `<selector>._domainkey.mail.nolbase.io` path. Add exactly what they give you.
+- [ ] **DMARC**: TXT on `_dmarc.nolbase.io`: `v=DMARC1; p=quarantine; rua=mailto:dmarc@nolbase.io; pct=100`. Start with `p=none` for first 2 weeks while you monitor reports, then move to `p=quarantine`, eventually `p=reject` once clean.
 - [ ] Wait for ZeptoMail dashboard to confirm domain is verified (usually 5-30 min after DNS propagates).
 
 ### 3.3 SMTP credentials
@@ -159,13 +178,13 @@ You can create these via Paystack dashboard OR via API. The plan codes go in
   ZEPTO_PORT=587
   ZEPTO_USERNAME=<from dashboard>
   ZEPTO_PASSWORD=<from dashboard>
-  MAIL_FROM_ADDRESS=noreply@mail.nolbase.com
+  MAIL_FROM_ADDRESS=noreply@mail.nolbase.io
   MAIL_FROM_NAME="Nolbase"
   ```
 
 ### 3.4 Test before going live
 
-- [ ] Sign yourself up at `app.nolbase.com/register` with a personal email. Confirm:
+- [ ] Sign yourself up at `app.nolbase.io/register` with a personal email. Confirm:
   - Verification email arrives
   - Subject + sender look right (no "via mail.zeptomail.com" — that means DKIM isn't aligned)
   - Click verify link, it works
@@ -185,7 +204,7 @@ APP_NAME=Nolbase
 APP_ENV=production
 APP_KEY=base64:<generate via `php artisan key:generate --show`>
 APP_DEBUG=false
-APP_URL=https://app.nolbase.com
+APP_URL=https://app.nolbase.io
 APP_PORT=8000
 
 # Multi-tenant cloud mode (NOT self-hosted)
@@ -219,12 +238,12 @@ ZEPTO_HOST=smtp.zeptomail.com
 ZEPTO_PORT=587
 ZEPTO_USERNAME=<from dashboard>
 ZEPTO_PASSWORD=<from dashboard>
-MAIL_FROM_ADDRESS=noreply@mail.nolbase.com
+MAIL_FROM_ADDRESS=noreply@mail.nolbase.io
 MAIL_FROM_NAME="Nolbase"
-MAIL_EHLO_DOMAIN=mail.nolbase.com
+MAIL_EHLO_DOMAIN=mail.nolbase.io
 
 # ── Realtime (Soketi) ───────────────────────────────────────────────
-PUSHER_HOST=app.nolbase.com
+PUSHER_HOST=app.nolbase.io
 PUSHER_PORT=6001
 PUSHER_SCHEME=https
 PUSHER_APP_ID=<random>
@@ -234,7 +253,7 @@ SOKETI_HOST=0.0.0.0
 
 # ── Nolbase brand + AGPL ────────────────────────────────────────────
 NOLBASE_BRAND_NAME=Nolbase
-NOLBASE_SUPPORT_EMAIL=support@nolbase.com
+NOLBASE_SUPPORT_EMAIL=support@nolbase.io
 NOLBASE_SOURCE_REPO_URL=https://github.com/BizPhereApps/nolbase
 
 # ── Optional: Sentry / error tracking ───────────────────────────────
@@ -255,12 +274,12 @@ docker exec coolify php artisan nolbase:preflight --strict
 
 ### 5.1 Smoke checks immediately after deploy
 
-- [ ] `curl https://app.nolbase.com/api/health` → 200 OK (trivial liveness)
-- [ ] `curl https://app.nolbase.com/api/nolbase/health` → 200 with `"status":"healthy"`. Component-level: DB + Redis. Wire this into your uptime monitor.
-- [ ] `curl 'https://app.nolbase.com/api/nolbase/health?deep=1'` → also probes Paystack reachability (do not poll this from monitoring — once per deploy is enough)
-- [ ] `curl -I https://app.nolbase.com/login` → 200, valid TLS
-- [ ] `curl -I https://app.nolbase.com/legal/source` → 200, page shows your real public repo URL
-- [ ] `curl -I https://app.nolbase.com/register` → 200
+- [ ] `curl https://app.nolbase.io/api/health` → 200 OK (trivial liveness)
+- [ ] `curl https://app.nolbase.io/api/nolbase/health` → 200 with `"status":"healthy"`. Component-level: DB + Redis. Wire this into your uptime monitor.
+- [ ] `curl 'https://app.nolbase.io/api/nolbase/health?deep=1'` → also probes Paystack reachability (do not poll this from monitoring — once per deploy is enough)
+- [ ] `curl -I https://app.nolbase.io/login` → 200, valid TLS
+- [ ] `curl -I https://app.nolbase.io/legal/source` → 200, page shows your real public repo URL
+- [ ] `curl -I https://app.nolbase.io/register` → 200
 - [ ] Sign up a real test user (your personal email). Receive trial email.
 - [ ] `docker exec coolify php artisan tinker --execute 'echo App\Models\Plan::count();'` → 3
 
@@ -272,7 +291,7 @@ docker exec -it coolify php artisan nolbase:admin:create
 #   upper/lower/digit/symbol)
 ```
 
-- [ ] Log in at `https://app.nolbase.com/nolbase/admin/login`
+- [ ] Log in at `https://app.nolbase.io/nolbase/admin/login`
 - [ ] Confirm Dashboard loads, MRR=₦0, no tenants yet
 - [ ] Visit `/nolbase/admin/settings` and **set the real source-repo URL there too** (writes to `nolbase_settings`, takes precedence over the env default)
 
@@ -304,7 +323,7 @@ Do every one of these in a test session, with a test bank account if possible.
 
 ### Drill A: Tenant signup → trial → upgrade
 
-1. [ ] Visit `https://app.nolbase.com/register`, sign up with a fresh email.
+1. [ ] Visit `https://app.nolbase.io/register`, sign up with a fresh email.
 2. [ ] Receive verification email (check spam folder; if there, your DKIM is broken).
 3. [ ] Click verify, land in dashboard.
 4. [ ] Confirm a Subscription row exists with `status=trialing` and `trial_ends_at=+14d`.
@@ -357,7 +376,7 @@ Do every one of these in a test session, with a test bank account if possible.
 
 ### Drill G: Webhook signature rejection
 
-27. [ ] `curl -X POST https://app.nolbase.com/webhooks/payments/paystack/events -d '{}'`
+27. [ ] `curl -X POST https://app.nolbase.io/webhooks/payments/paystack/events -d '{}'`
     → must return 401. If 200, your webhook secret is misconfigured.
 
 If any of A-G fails, **don't launch.** Fix it first.
@@ -417,7 +436,7 @@ Wire these up **before** the first signup, not after.
 - [ ] Uptime monitor — Better Stack, UptimeRobot, etc.
     - Liveness probe → `/api/health` every 60s (trivially returns 200 if PHP is alive)
     - Readiness/component probe → `/api/nolbase/health` every 60s. Alert on `status:"degraded"` or HTTP 503. This catches DB/Redis outages that `/api/health` will miss.
-- [ ] Status page — `status.nolbase.com` (optional but recommended once you have paying customers).
+- [ ] Status page — `status.nolbase.io` (optional but recommended once you have paying customers).
 
 ### 9.3 Business metrics dashboard
 
@@ -483,7 +502,7 @@ Already wired:
 
 ### Quarterly
 
-- [ ] Pen-test light pass: try the OWASP Top 10 against `app.nolbase.com`. Specifically: cross-tenant access, sub-team scoping (a Client should NOT be able to navigate to another Client's project URL), webhook signature bypass, password reset, OAuth callback hijack.
+- [ ] Pen-test light pass: try the OWASP Top 10 against `app.nolbase.io`. Specifically: cross-tenant access, sub-team scoping (a Client should NOT be able to navigate to another Client's project URL), webhook signature bypass, password reset, OAuth callback hijack.
 - [ ] Review upstream Coolify commits. Cherry-pick critical security fixes; document anything you skipped and why.
 - [ ] Renew Paystack business-status if they require it.
 

@@ -38,7 +38,7 @@ class Settings extends Component
         'support_email' => [
             'label' => 'Support email',
             'description' => 'Surfaced on suspension messages, transactional emails, /legal/source.',
-            'placeholder' => 'support@nolbase.com',
+            'placeholder' => 'support@nolbase.io',
         ],
         'announcement_banner' => [
             'label' => 'Tenant announcement banner',
@@ -57,7 +57,7 @@ class Settings extends Component
         ],
         'nolbase_hetzner_ssh_private_key' => [
             'label' => 'Nolbase-managed: SSH private key',
-            'description' => "Matching PRIVATE key (OpenSSH format, full -----BEGIN... block). Stored encrypted at rest. Required for Coolify to SSH into managed servers.",
+            'description' => 'Matching PRIVATE key (OpenSSH format, full -----BEGIN... block). Stored encrypted at rest. Required for Coolify to SSH into managed servers.',
             'placeholder' => '-----BEGIN OPENSSH PRIVATE KEY-----',
         ],
         'nolbase_default_markup_pct' => [
@@ -100,7 +100,7 @@ class Settings extends Component
             NolbaseAdminAudit::log($admin, 'settings.updated', null, ['keys' => $changed]);
         }
 
-        $this->dispatch('toast', ['type' => 'success', 'message' => count($changed)." setting(s) updated."]);
+        $this->dispatch('toast', ['type' => 'success', 'message' => count($changed).' setting(s) updated.']);
     }
 
     public function render()

@@ -12,7 +12,7 @@ return [
     | and in the footer.
     |
     */
-    'source_repo_url' => env('NOLBASE_SOURCE_REPO_URL', 'https://github.com/REPLACE-ME/nolbase'),
+    'source_repo_url' => env('NOLBASE_SOURCE_REPO_URL', 'https://github.com/BizPhereApps/coolify'),
 
     /*
     |--------------------------------------------------------------------------
@@ -20,5 +20,6 @@ return [
     |--------------------------------------------------------------------------
     */
     'brand_name' => env('NOLBASE_BRAND_NAME', 'Nolbase'),
-    'support_email' => env('NOLBASE_SUPPORT_EMAIL', 'support@nolbase.com'),
+    'support_email' => env('NOLBASE_SUPPORT_EMAIL', 'support@nolbase.io'),
+    'marketing_url' => env('NOLBASE_MARKETING_URL', 'https://nolbase.io'),
 ];

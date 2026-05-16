@@ -13,7 +13,7 @@
 
 Nolbase is a **multi-tenant Platform-as-a-Service with a built-in reseller layer**. It lets developers and small teams deploy applications, databases, and services to **their own servers or cloud accounts** through a hosted control plane, without managing the underlying infrastructure orchestration themselves — and additionally lets them **resell hosting slices to their own end-clients** through Nolbase's marketplace billing.
 
-It is a hosted offering built on top of an AGPL fork of Coolify. Customers sign up at `nolbase.com`, pick a plan, pay via **Paystack** (NGN), and start deploying. They can:
+It is a hosted offering built on top of an AGPL fork of Coolify. Customers sign up at `nolbase.io`, pick a plan, pay via **Paystack** (NGN), and start deploying. They can:
 - Attach an existing server via SSH.
 - Paste a cloud-provider API token (DO, Hetzner, Vultr) so Nolbase can provision VPS instances **on their cloud account**.
 - Pay Nolbase for **fully-managed** dedicated infrastructure.
@@ -155,7 +155,7 @@ The product breaks into six pillars. Each maps to a phased build.
 
 ### 6.1 New tenant signup → first deploy (happy path)
 
-1. Visitor lands on `nolbase.com/pricing`.
+1. Visitor lands on `nolbase.io/pricing`.
 2. Clicks "Start Pro trial" → email/password registration.
 3. ZeptoMail sends email-verification link. User verifies.
 4. On first login: onboarding wizard.
@@ -220,7 +220,7 @@ If Adaeze leaves Nolbase: all her client projects need a graceful handoff (see �
 3. Reviews recent activity / Paystack invoices / server usage.
 4. Clicks "Suspend" → confirm modal → `Team.nolbase_status = suspended`.
 5. Suspended teams:
-   - Cannot log in (login throws "Account suspended — contact support@nolbase.com").
+   - Cannot log in (login throws "Account suspended — contact support@nolbase.io").
    - Their deployed apps **keep running** (we don't punish their end-users).
    - Their Paystack subscription is **not** auto-cancelled — that's a manual decision.
 
@@ -454,7 +454,7 @@ This pillar is **already implemented by Coolify**. Nolbase does not modify the c
 ### 9.4 High-level deployment topology
 
 ```
-                   Public DNS (nolbase.com)
+                   Public DNS (nolbase.io)
                           │
                   ┌───────┴────────┐
                   │  Control plane │
@@ -707,7 +707,7 @@ Tenant can export and leave at any time (see §6.5).
 - [ ] AGPL footer + `/legal/source`
 - [ ] Pest tests for billing happy paths + dunning
 
-**Exit criteria:** A real human (not Nolbase team) can sign up at `nolbase.com`, pay ₦15k via Paystack, attach a Hetzner server they already own, deploy a Laravel app.
+**Exit criteria:** A real human (not Nolbase team) can sign up at `nolbase.io`, pay ₦15k via Paystack, attach a Hetzner server they already own, deploy a Laravel app.
 
 ### Phase 2 — Quotas & Polish (~1 week)
 
@@ -715,7 +715,7 @@ Tenant can export and leave at any time (see §6.5).
 - [ ] Upgrade CTAs at quota walls
 - [ ] Marketing pages (landing, pricing, docs link, contact)
 - [ ] Onboarding wizard
-- [ ] Status page (uptime.nolbase.com via Better Stack or self-hosted)
+- [ ] Status page (uptime.nolbase.io via Better Stack or self-hosted)
 
 ### Phase 3 — Super-admin (~2 weeks)
 
@@ -850,7 +850,7 @@ The biggest phase. Adds the entire P7 pillar.
 | **SubTeam** | A child team scoped under a Developer's team; holds a Client and their project. |
 | **Marketplace fee** | Nolbase's cut of Client-to-Developer payments. Default 10%. |
 | **Payout** | A Paystack Transfer from Nolbase to a Developer's verified bank account. |
-| **Control plane** | The Nolbase web app at nolbase.com — orchestrates but does not proxy tenant traffic. |
+| **Control plane** | The Nolbase web app at nolbase.io — orchestrates but does not proxy tenant traffic. |
 | **Plan** | A pricing tier paid by the Tenant to Nolbase (Free, Pro, Business). |
 | **Subscription** | A Tenant's Paystack subscription to Nolbase (plan billing). |
 | **Client subscription** | A Client's Paystack subscription paying a Developer for a hosting offer (marketplace billing). |
