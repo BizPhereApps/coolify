@@ -432,8 +432,25 @@ Wire these up **before** the first signup, not after.
 
 ### 9.5 Alerts (Slack / Discord / email)
 
-- [ ] Webhook signature failures (potential probe / misconfiguration)
-- [ ] Paystack webhook 5xx responses (we're failing to process)
+The repository ships an operator-facing alert notifier that posts to
+any Slack-compatible incoming webhook (Discord accepts the same payload
+via `/slack` suffix). Set:
+
+```bash
+NOLBASE_ALERTS_WEBHOOK_URL=https://hooks.slack.com/services/T../B../...
+# or store in the DB so it's rotatable without a redeploy:
+docker exec coolify php artisan tinker --execute '
+  App\Models\NolbaseSetting::write("nolbase_alerts_webhook_url", "https://...");
+'
+```
+
+Already wired:
+
+- [x] Webhook signature failures → WARN alert with caller IP + event
+- [x] Managed-billing failures → WARN alert with team + amount + reason
+- [x] Managed-server suspensions (grace expired) → CRITICAL alert
+- [ ] Paystack webhook 5xx responses (not yet wired — `HandleWebhookEvent` throws are only logged)
+- [ ] DB connection drops (catch from `/api/nolbase/health` polling, not yet in-process)
 - [ ] Payout batch failures (`RunPayoutBatchJob` logs `skipped` count — set up an alert if `paid=0 && pending_balance > 0`)
 - [ ] Health check failures
 - [ ] Trial-to-paid conversion rate drops below X% (longer-term)

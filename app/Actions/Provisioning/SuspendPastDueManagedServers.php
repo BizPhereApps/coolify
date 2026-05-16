@@ -5,6 +5,7 @@ namespace App\Actions\Provisioning;
 use App\Models\NolbaseManagedServer;
 use App\Models\NolbaseSetting;
 use App\Services\HetznerService;
+use App\Services\NolbaseAlert;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -64,6 +65,17 @@ class SuspendPastDueManagedServers
             $suspended++;
 
             $this->notifySuspended($managed);
+
+            NolbaseAlert::send(
+                title: 'Managed server suspended (grace expired)',
+                message: 'Server '.($managed->server->name ?? '#'.$managed->id).' has been powered off after the past-due grace window expired. Tenant emailed.',
+                level: NolbaseAlert::LEVEL_CRITICAL,
+                context: [
+                    'managed_id' => $managed->id,
+                    'team' => $managed->server?->team?->name ?? '—',
+                    'past_due_since' => $managed->past_due_since?->toIso8601String(),
+                ],
+            );
         }
 
         return ['suspended' => $suspended, 'examined' => $candidates->count()];

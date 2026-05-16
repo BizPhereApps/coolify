@@ -5,6 +5,7 @@ namespace App\Actions\Provisioning;
 use App\Models\NolbaseManagedInvoice;
 use App\Models\NolbaseManagedServer;
 use App\Models\Team;
+use App\Services\NolbaseAlert;
 use App\Services\PaystackService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -219,5 +220,16 @@ class BillManagedServers
                 'team_id' => $team->id, 'error' => $e->getMessage(),
             ]);
         }
+
+        NolbaseAlert::send(
+            title: 'Managed-server billing failed',
+            message: 'Charge of ₦'.number_format($totalNgn)." for team {$team->name} failed. Tenant has been emailed; servers flipped to past_due.",
+            level: NolbaseAlert::LEVEL_WARN,
+            context: [
+                'team_id' => $team->id,
+                'amount_ngn' => $totalNgn,
+                'reason' => $reason,
+            ],
+        );
     }
 }

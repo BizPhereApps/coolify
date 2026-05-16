@@ -3,6 +3,7 @@
 namespace App\Console\Commands\Nolbase;
 
 use App\Models\NolbaseAdmin;
+use App\Models\NolbaseSetting;
 use App\Models\Plan;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -56,6 +57,7 @@ class Preflight extends Command
         $this->checkPlansHavePaystackCodes();
         $this->checkSuperAdminExists();
         $this->checkMarketplaceFeeConfigured();
+        $this->checkAlertsWebhookConfigured();
 
         return $this->reportAndExit();
     }
@@ -265,6 +267,22 @@ class Preflight extends Command
             }
         } catch (Throwable $e) {
             $this->failCheck('superadmin', $e->getMessage());
+        }
+    }
+
+    private function checkAlertsWebhookConfigured(): void
+    {
+        $url = env('NOLBASE_ALERTS_WEBHOOK_URL');
+        try {
+            $fromDb = NolbaseSetting::read('nolbase_alerts_webhook_url');
+            $url = $fromDb ?: $url;
+        } catch (Throwable) {
+            // Setting table may not yet exist in some early-deploy states.
+        }
+        if (! $url) {
+            $this->warnCheck('alerts webhook', 'NOLBASE_ALERTS_WEBHOOK_URL not set — operator alerts (signature rejections, billing failures, suspensions) will be silent. Highly recommended for production.');
+        } else {
+            $this->passCheck('alerts webhook', 'configured');
         }
     }
 

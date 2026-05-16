@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Webhook;
 use App\Http\Controllers\Controller;
 use App\Jobs\PaystackWebhookProcessJob;
 use App\Models\PaystackEvent;
+use App\Services\NolbaseAlert;
 use App\Services\PaystackService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -21,6 +22,16 @@ class Paystack extends Controller
                 'ip' => $request->ip(),
                 'event' => $request->input('event'),
             ]);
+
+            NolbaseAlert::send(
+                title: 'Paystack webhook signature rejected',
+                message: 'A POST to /webhooks/payments/paystack/events arrived with an invalid HMAC. Likely cause: probe or PAYSTACK_WEBHOOK_SECRET drift between Paystack dashboard and this deploy.',
+                level: NolbaseAlert::LEVEL_WARN,
+                context: [
+                    'ip' => $request->ip(),
+                    'event' => (string) $request->input('event', 'unknown'),
+                ],
+            );
 
             return response()->json(['message' => 'invalid signature'], 401);
         }
